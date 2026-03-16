@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">cafeteria-pos</string>
+    <string name="title_activity_main">cafeteria-pos</string>
+    <string name="package_name">com.cafeteria.pos</string>
+    <string name="custom_url_scheme">com.cafeteria.pos</string>
+</resources>

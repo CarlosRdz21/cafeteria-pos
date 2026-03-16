@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  username  String    @unique
+  email     String?   @unique
+  password  String
+  name      String
+  role      String
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  expenses        Expense[]
+  supplyMovements SupplyMovement[]
+}
+
+model ProductCategory {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  products   Product[]
+}
+
+model SupplyCategory {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  active    Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  supplies ProductSupply[]
+}
+
+model Product {
+  id           Int             @id @default(autoincrement())
+  name         String
+  description  String          @db.Text
+  price        Float
+  image        String          @db.LongText
+  categoryId   Int
+  categoryName String
+  available    Boolean         @default(true)
+  stock        Int?
+  variantPricing Json?
+  drinkBaseType String?
+  milkOptions   Json?
+  waterOptions  Json?
+  milkOptionExtras Json?
+  waterOptionExtras Json?
+  allowFlavorSelection Boolean @default(false)
+  flavorOptions   Json?
+  flavorOptionExtras Json?
+  serviceTemperature String?
+  removableIngredients Json?
+  extraIngredients Json?
+  extraIngredientPrices Json?
+
+  category ProductCategory @relation(fields: [categoryId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+model ProductSupply {
+  id           Int            @id @default(autoincrement())
+  name         String
+  categoryId   Int
+  categoryName String
+  unit         String
+  currentStock Float
+  unitCost     Float?
+  minStock     Float?
+  notes        String?        @db.Text
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+
+  category SupplyCategory @relation(fields: [categoryId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  movements SupplyMovement[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+model Order {
+  id           Int        @id @default(autoincrement())
+  status       String
+  subtotal     Float
+  tax          Float
+  total        Float
+  discountTotal Float @default(0)
+  appliedPromotions Json?
+  tableNumber  String?
+  customerName String?
+  notes        String?    @db.Text
+  createdAt    DateTime   @default(now())
+  paymentMethod String?
+  amountPaid   Float?
+  change       Float?
+
+  items        OrderItem[]
+  payments     Payment[]
+}
+
+model OrderItem {
+  id        Int    @id @default(autoincrement())
+  productId Int
+  name      String
+  price     Float
+  quantity  Int
+  subtotal  Float
+  orderId   Int
+
+  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  method    String
+  amount    Float
+  provider  String?
+  reference String?
+  metadata  Json?
+  paidAt    DateTime @default(now())
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([orderId])
+}
+
+model CashRegister {
+  id                Int       @id @default(autoincrement())
+  openingAmount     Float
+  closingAmount     Float?
+  expectedAmount    Float?
+  difference        Float?
+  cashSales         Float
+  cardSales         Float
+  expenses          Float
+  totalTransactions Int
+  openedAt          DateTime
+  closedAt          DateTime?
+  status            String
+  userRef           String
+
+  expenseRows Expense[]
+}
+
+model Expense {
+  id             Int       @id @default(autoincrement())
+  description    String?   @db.Text
+  concept        String?   @db.Text
+  amount         Float
+  category       String
+  timestamp      DateTime
+  userId         Int?
+  userName       String?
+  notes          String?   @db.Text
+  cashRegisterId Int?
+
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  cashRegister CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([timestamp])
+  @@index([category])
+  @@index([userId])
+  @@index([cashRegisterId])
+}
+
+model SupplyMovement {
+  id        Int       @id @default(autoincrement())
+  supplyId  Int
+  type      String
+  quantity  Float
+  unitCost  Float?
+  totalCost Float?
+  reason    String?   @db.Text
+  reference String?   @db.Text
+  userId    Int?
+  userName  String?
+  timestamp DateTime
+  notes     String?   @db.Text
+
+  supply ProductSupply @relation(fields: [supplyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user   User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([supplyId])
+  @@index([timestamp])
+  @@index([type])
+}

@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+/* Overrides minimos para evitar que las cards se estiren raro */
+.products-panel {
+  min-width: 0;
+}
+
+.products-grid {
+  align-items: start;
+  align-content: start;
+  grid-auto-rows: max-content;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.product-card {
+  width: 100%;
+  max-width: 260px;
+  justify-self: start;
+  overflow: hidden;
+}
+
+.product-image {
+  background: #eee;
+}
+
+.product-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -1,0 +1,63 @@
+apply plugin: 'com.android.application'
+
+android {
+  namespace "com.cafeteria.pos"
+  compileSdkVersion rootProject.ext.compileSdkVersion
+  defaultConfig {
+    applicationId "com.cafeteria.pos"
+    minSdkVersion rootProject.ext.minSdkVersion
+    targetSdkVersion rootProject.ext.targetSdkVersion
+    versionCode 1
+    versionName "1.0"
+    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
+  }
+
+  // Forzar resolución de dependencias
+  configurations.all {
+    resolutionStrategy {
+      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+    }
+  }
+}
+
+repositories {
+  flatDir{
+    dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+  }
+}
+
+dependencies {
+  implementation fileTree(include: ['*.jar'], dir: 'libs')
+  implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+  implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+  implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+  implementation project(':capacitor-android')
+
+  // Kotlin actualizado
+  implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+
+  testImplementation "junit:junit:$junitVersion"
+  androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+  androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+  implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+  def servicesJSON = file('google-services.json')
+  if (servicesJSON.text) {
+    apply plugin: 'com.google.gms.google-services'
+  }
+} catch(Exception e) {
+  logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const payment_controller_1 = require("../controllers/payment.controller");
+const router = (0, express_1.Router)();
+router.post('/', payment_controller_1.PaymentController.create);
+router.post('/mercado-pago/preference', payment_controller_1.PaymentController.createMercadoPagoPreference);
+router.post('/mercado-pago/verify', payment_controller_1.PaymentController.verifyMercadoPagoPayment);
+router.post('/mercado-pago/point/order', payment_controller_1.PaymentController.createMercadoPagoPointOrder);
+router.get('/mercado-pago/point/order/:id', payment_controller_1.PaymentController.getMercadoPagoPointOrder);
+router.get('/reports', payment_controller_1.PaymentController.listByDate);
+exports.default = router;
