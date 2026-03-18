@@ -33,13 +33,13 @@ import { getServerUrl } from '../../core/config/server.config';
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <span>Configuración</span>
+      <span>Configuracion</span>
     </mat-toolbar>
 
     <div class="settings-container">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Conexión al Servidor</mat-card-title>
+          <mat-card-title>Conexion al Servidor</mat-card-title>
         </mat-card-header>
 
         <mat-card-content>
@@ -52,13 +52,13 @@ import { getServerUrl } from '../../core/config/server.config';
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>URL del Servidor</mat-label>
-            <input matInput [(ngModel)]="serverUrl" placeholder="http://192.168.1.100:3000">
-            <mat-hint>Ingresa la IP de la computadora donde corre el servidor</mat-hint>
+            <input matInput [(ngModel)]="serverUrl" placeholder="https://cafeteria-pos-8bwt.onrender.com">
+            <mat-hint>Usa Render en produccion o una IP local solo para pruebas internas</mat-hint>
           </mat-form-field>
 
           <div class="toggle-field">
             <mat-slide-toggle [(ngModel)]="autoConnect">
-              Conectar automáticamente al iniciar
+              Conectar automaticamente al iniciar
             </mat-slide-toggle>
           </div>
 
@@ -78,7 +78,7 @@ import { getServerUrl } from '../../core/config/server.config';
             </button>
             <button mat-button (click)="runDiagnostic()">
               <mat-icon>network_check</mat-icon>
-              Diagnóstico
+              Diagnostico
             </button>
           </div>
         </mat-card-content>
@@ -91,29 +91,30 @@ import { getServerUrl } from '../../core/config/server.config';
 
         <mat-card-content>
           <div class="instructions">
-            <h3>Cómo configurar la conexión:</h3>
+            <h3>Como configurar la conexion</h3>
             <ol>
               <li>
-                <strong>En la computadora:</strong>
+                <strong>Produccion recomendada:</strong>
                 <ul>
-                  <li>Ve a la carpeta <code>backend</code></li>
-                  <li>Ejecuta: <code>npm run dev</code></li>
-                  <li>El servidor iniciará en el puerto 3000</li>
+                  <li>Usa tu backend publicado en Render</li>
+                  <li>Ingresa la URL publica del servicio</li>
+                  <li>Ejemplo: <code>https://cafeteria-pos-8bwt.onrender.com</code></li>
                 </ul>
               </li>
               <li>
-                <strong>Obtén la IP de la computadora:</strong>
+                <strong>Modo local opcional:</strong>
                 <ul>
-                  <li>Windows: <code>ipconfig</code></li>
-                  <li>Mac/Linux: <code>ifconfig</code></li>
-                  <li>Busca la IPv4 (ej: 192.168.1.100)</li>
+                  <li>Abre la carpeta <code>backend</code></li>
+                  <li>Ejecuta <code>npm run dev</code></li>
+                  <li>Usa una URL como <code>http://192.168.1.100:3000</code></li>
                 </ul>
               </li>
               <li>
-                <strong>En cada dispositivo (tablets/celular):</strong>
+                <strong>En cada dispositivo:</strong>
                 <ul>
-                  <li>Ingresa la URL: <code>http://[IP]:3000</code></li>
-                  <li>Ejemplo: <code>http://192.168.1.100:3000</code></li>
+                  <li>Ingresa la URL del backend que usaras</li>
+                  <li>Render: <code>https://cafeteria-pos-8bwt.onrender.com</code></li>
+                  <li>Local: <code>http://192.168.1.100:3000</code></li>
                   <li>Click en "Conectar"</li>
                 </ul>
               </li>
@@ -121,7 +122,7 @@ import { getServerUrl } from '../../core/config/server.config';
 
             <div class="note">
               <mat-icon>info</mat-icon>
-              <p>Asegúrate de que todos los dispositivos estén en la misma red WiFi</p>
+              <p>Con Render ya no necesitas que todos los dispositivos esten en la misma red WiFi</p>
             </div>
           </div>
         </mat-card-content>
@@ -268,7 +269,6 @@ export class SettingsComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    // Cargar configuración guardada
     const savedUrl = localStorage.getItem('serverUrl');
     if (savedUrl) {
       this.serverUrl = savedUrl;
@@ -279,7 +279,6 @@ export class SettingsComponent implements OnInit {
       this.autoConnect = savedAutoConnect === 'true';
     }
 
-    // Verificar estado de conexión
     this.socketService.connected$.subscribe(connected => {
       this.isConnected = connected;
       if (connected) {
@@ -296,28 +295,21 @@ export class SettingsComponent implements OnInit {
       return;
     }
 
-    // Limpiar error anterior
     this.connectionError = '';
-
-    // Guardar configuración
     localStorage.setItem('serverUrl', this.serverUrl);
     localStorage.setItem('autoConnect', this.autoConnect.toString());
 
-    // Mostrar mensaje
     this.snackBar.open('Conectando al servidor...', '', {
       duration: 2000
     });
 
-    // Conectar
-    console.log('Iniciando conexión a:', this.serverUrl);
     this.socketService.setServerUrl(this.serverUrl);
     this.socketService.connect();
 
-    // Verificar conexión después de 5 segundos
     setTimeout(() => {
       if (!this.socketService.isConnected()) {
-        this.connectionError = 'No se pudo conectar. Verifica la URL y que el servidor esté corriendo.';
-        this.snackBar.open('Error de conexión. Abre la consola para más detalles.', 'Cerrar', {
+        this.connectionError = 'No se pudo conectar. Verifica la URL y que el backend este disponible.';
+        this.snackBar.open('Error de conexion. Revisa la URL del backend.', 'Cerrar', {
           duration: 5000
         });
       }
