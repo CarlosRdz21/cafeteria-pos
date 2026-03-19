@@ -14,6 +14,8 @@ export class AuthController {
       const data = await AuthService.login(loginUsername, password);
       res.json(data);
     } catch (error: any) {
+      const attemptedUsername = (req.body?.username || req.body?.email || '').toString().trim().toLowerCase();
+      console.warn(`[auth] login response 401 username="${attemptedUsername}" reason="${error?.message || 'unknown'}"`);
       res.status(401).json({ error: error.message });
     }
   }

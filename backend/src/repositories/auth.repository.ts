@@ -7,6 +7,11 @@ export class AuthRepository {
 
     // MySQL nuevo: campo username
     try {
+      const byExactUsername = await (prisma as any).user.findFirst({
+        where: { username: exact }
+      });
+      if (byExactUsername) return byExactUsername;
+
       const byUsername = await (prisma as any).user.findUnique({
         where: { username: normalized }
       });

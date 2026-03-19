@@ -4,8 +4,12 @@ import { AuthRepository } from '../repositories/auth.repository';
 
 export class AuthService {
   static async login(username: string, password: string) {
+    const normalizedUsername = username.trim().toLowerCase();
     const user = await AuthRepository.findByUsername(username);
-    if (!user) throw new Error('Invalid credentials');
+    if (!user) {
+      console.warn(`[auth] login failed: user_not_found username="${normalizedUsername}"`);
+      throw new Error('Invalid credentials');
+    }
 
     const stored = String(user.password || '');
     const looksHashed = /^\$2[aby]\$\d{2}\$/.test(stored);
@@ -18,7 +22,16 @@ export class AuthService {
       ok = stored === password;
     }
 
-    if (!ok) throw new Error('Invalid credentials');
+    if (!ok) {
+      console.warn(
+        `[auth] login failed: password_mismatch username="${normalizedUsername}" userId=${user.id} hashed=${looksHashed} storedLength=${stored.length}`
+      );
+      throw new Error('Invalid credentials');
+    }
+
+    console.log(
+      `[auth] login success username="${normalizedUsername}" userId=${user.id} role=${user.role}`
+    );
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
