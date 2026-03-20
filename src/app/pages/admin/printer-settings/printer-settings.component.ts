@@ -130,8 +130,9 @@ export class PrinterSettingsComponent implements OnInit {
     private router: Router
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.config = this.printerService.getConfig();
+    this.config = await this.printerService.loadRemoteConfig();
     this.refreshKnownPrinters();
     this.connected = this.printerService.isConnected();
     this.bluetoothSupported = this.printerService.isPrinterCapabilityAvailable();
@@ -140,8 +141,8 @@ export class PrinterSettingsComponent implements OnInit {
     }
   }
 
-  save(showToast: boolean = true) {
-    this.config = this.printerService.saveConfig(this.config);
+  async save(showToast: boolean = true) {
+    this.config = await this.printerService.saveConfigToServer(this.config);
     this.refreshKnownPrinters();
     if (showToast) {
       this.snackBar.open('Configuracion guardada', 'Cerrar', { duration: 2000, verticalPosition: 'top' });
@@ -162,7 +163,7 @@ export class PrinterSettingsComponent implements OnInit {
 
     this.lastBluetoothMessage = '';
     this.config.bluetoothName = printer.name;
-    this.save(false);
+    await this.save(false);
     this.snackBar.open(`Impresora agregada: ${printer.name}`, 'Cerrar', { duration: 2500, verticalPosition: 'top' });
   }
 
@@ -172,7 +173,7 @@ export class PrinterSettingsComponent implements OnInit {
       return;
     }
 
-    this.save(false);
+    await this.save(false);
     const ok = await this.printerService.connectToPrinter(this.config.bluetoothName);
     this.connected = this.printerService.isConnected();
     this.config = this.printerService.getConfig();
@@ -198,7 +199,7 @@ export class PrinterSettingsComponent implements OnInit {
       return;
     }
 
-    this.save(false);
+    await this.save(false);
     const ok = await this.printerService.printTestTicket();
     this.connected = this.printerService.isConnected();
     if (ok) {
@@ -209,8 +210,8 @@ export class PrinterSettingsComponent implements OnInit {
     this.showBluetoothMessage(this.printerService.getLastBluetoothIssue() || 'Error al imprimir prueba');
   }
 
-  resetDefaults() {
-    this.config = this.printerService.saveConfig({
+  async resetDefaults() {
+    this.config = await this.printerService.saveConfigToServer({
       bluetoothName: 'BlueTooth Printer',
       businessName: 'CAFETERIA',
       businessAddress: '',

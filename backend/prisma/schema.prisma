@@ -201,3 +201,13 @@ model SupplyMovement {
   @@index([timestamp])
   @@index([type])
 }
+
+model PrinterSetting {
+  id              Int      @id
+  bluetoothName   String   @default("BlueTooth Printer")
+  businessName    String   @default("CAFETERIA")
+  businessAddress String   @default("")
+  businessPhone   String   @default("")
+  cutPaper        Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}

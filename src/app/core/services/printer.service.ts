@@ -1,8 +1,11 @@
-import { Injectable } from '@angular/core';
+ï»¿import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { CashRegister, Order } from '../models/domain.models';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { firstValueFrom } from 'rxjs';
+import { buildApiUrl } from '../config/server.config';
 
 export interface PrinterConfig {
   bluetoothName: string;
@@ -46,9 +49,12 @@ export class PrinterService {
   private nativeConnectedAddress = '';
   private readonly ticketLogoPath = 'assets/images/logoCafeteria.png';
   private operationQueue: Promise<void> = Promise.resolve();
+  private configCache: PrinterConfig | null = null;
+  private configLoadPromise: Promise<PrinterConfig> | null = null;
 
   private readonly configKey = 'printerConfig';
   private readonly knownPrintersKey = 'knownBluetoothPrinters';
+  private readonly printerSettingsApi = buildApiUrl('printer-settings');
   private readonly defaultConfig: PrinterConfig = {
     bluetoothName: 'BlueTooth Printer',
     businessName: 'CAFETERIA',
@@ -63,19 +69,18 @@ export class PrinterService {
     '0000fff0-0000-1000-8000-00805f9b34fb'
   ];
 
-  getConfig(): PrinterConfig {
-    const raw = localStorage.getItem(this.configKey);
-    if (!raw) return { ...this.defaultConfig };
+  constructor(private http: HttpClient) {
+    void this.loadRemoteConfig().catch(() => undefined);
+  }
 
-    try {
-      const parsed = JSON.parse(raw);
-      return {
-        ...this.defaultConfig,
-        ...parsed
-      };
-    } catch {
-      return { ...this.defaultConfig };
+  getConfig(): PrinterConfig {
+    if (this.configCache) {
+      return { ...this.configCache };
     }
+
+    const config = this.readConfigFromLocalStorage();
+    this.configCache = config;
+    return { ...config };
   }
 
   saveConfig(config: Partial<PrinterConfig>): PrinterConfig {
@@ -83,8 +88,57 @@ export class PrinterService {
       ...this.getConfig(),
       ...config
     };
+    this.configCache = merged;
     localStorage.setItem(this.configKey, JSON.stringify(merged));
     return merged;
+  }
+
+  async loadRemoteConfig(force: boolean = false): Promise<PrinterConfig> {
+    if (!force && this.configLoadPromise) {
+      return this.configLoadPromise;
+    }
+
+    this.configLoadPromise = firstValueFrom(this.http.get<Partial<PrinterConfig>>(this.printerSettingsApi))
+      .then(remote => {
+        const merged = {
+          ...this.defaultConfig,
+          ...(remote || {})
+        };
+        this.configCache = merged;
+        localStorage.setItem(this.configKey, JSON.stringify(merged));
+        return { ...merged };
+      })
+      .catch(() => {
+        const fallback = this.readConfigFromLocalStorage();
+        this.configCache = fallback;
+        return { ...fallback };
+      })
+      .finally(() => {
+        this.configLoadPromise = null;
+      });
+
+    return this.configLoadPromise;
+  }
+
+  async saveConfigToServer(config: Partial<PrinterConfig>): Promise<PrinterConfig> {
+    const merged = this.saveConfig(config);
+
+    try {
+      const remote = await firstValueFrom(this.http.put<Partial<PrinterConfig>>(this.printerSettingsApi, merged));
+      const normalized = {
+        ...this.defaultConfig,
+        ...(remote || {})
+      };
+      this.configCache = normalized;
+      localStorage.setItem(this.configKey, JSON.stringify(normalized));
+      return { ...normalized };
+    } catch {
+      return merged;
+    }
+  }
+
+  async ensureConfigLoaded(): Promise<PrinterConfig> {
+    return this.loadRemoteConfig();
   }
 
   getKnownPrinters(): KnownPrinter[] {
@@ -104,6 +158,21 @@ export class PrinterService {
         }));
     } catch {
       return [];
+    }
+  }
+
+  private readConfigFromLocalStorage(): PrinterConfig {
+    const raw = localStorage.getItem(this.configKey);
+    if (!raw) return { ...this.defaultConfig };
+
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        ...this.defaultConfig,
+        ...parsed
+      };
+    } catch {
+      return { ...this.defaultConfig };
     }
   }
 
@@ -194,6 +263,8 @@ export class PrinterService {
     options: { allowRequestDevice?: boolean } = {}
   ): Promise<boolean> {
     try {
+      await this.ensureConfigLoaded();
+
       if (this.isNativeAndroidApp()) {
         const granted = await this.ensureNativePermissions();
         if (!granted) return false;
@@ -275,7 +346,7 @@ export class PrinterService {
     } catch (error: any) {
       const name = String(error?.name || '');
       if (name === 'NotFoundError' || name === 'SecurityError') {
-        this.setBluetoothIssue(this.mapBluetoothError(error, 'No se seleccionó impresora'));
+        this.setBluetoothIssue(this.mapBluetoothError(error, 'No se seleccionÃ³ impresora'));
         return false;
       }
       this.setBluetoothIssue(this.mapBluetoothError(error, 'Error al conectar impresora'));
@@ -308,6 +379,8 @@ export class PrinterService {
   async printReceipt(order: Order, businessInfo?: any): Promise<boolean> {
     return this.enqueue(async () => {
       try {
+        await this.ensureConfigLoaded();
+
         if (!this.isConnected()) {
           const connected = await this.connectToPrinter(undefined, { allowRequestDevice: false });
           if (!connected) return false;
@@ -354,6 +427,8 @@ export class PrinterService {
   async printKitchenTicket(order: Order): Promise<boolean> {
     return this.enqueue(async () => {
       try {
+        await this.ensureConfigLoaded();
+
         if (!this.isConnected()) {
           const connected = await this.connectToPrinter(undefined, { allowRequestDevice: false });
           if (!connected) return false;
@@ -375,6 +450,8 @@ export class PrinterService {
   async printPendingAccount(order: Order): Promise<boolean> {
     return this.enqueue(async () => {
       try {
+        await this.ensureConfigLoaded();
+
         if (!this.isConnected()) {
           const connected = await this.connectToPrinter(undefined, { allowRequestDevice: false });
           if (!connected) return false;
@@ -396,6 +473,8 @@ export class PrinterService {
   async printCashClosure(register: CashRegister): Promise<boolean> {
     return this.enqueue(async () => {
       try {
+        await this.ensureConfigLoaded();
+
         if (!this.isConnected()) {
           const connected = await this.connectToPrinter(undefined, { allowRequestDevice: false });
           if (!connected) return false;
@@ -808,10 +887,10 @@ export class PrinterService {
     const normalized = text
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/¡/g, '!')
-      .replace(/¿/g, '?')
-      .replace(/ñ/g, 'n')
-      .replace(/Ñ/g, 'N');
+      .replace(/Â¡/g, '!')
+      .replace(/Â¿/g, '?')
+      .replace(/Ã±/g, 'n')
+      .replace(/Ã‘/g, 'N');
 
     const encoder = new TextEncoder();
     return encoder.encode(normalized);
@@ -1009,17 +1088,18 @@ export class PrinterService {
 
   private getUnsupportedBluetoothMessage(): string {
     if (this.isCapacitorAndroid()) {
-      return 'Esta app Android requiere plugin nativo para impresoras Bluetooth clásicas (SPP). Web Bluetooth no está disponible aquí.';
+      return 'Esta app Android requiere plugin nativo para impresoras Bluetooth clÃ¡sicas (SPP). Web Bluetooth no estÃ¡ disponible aquÃ­.';
     }
     return 'Bluetooth no soportado en este dispositivo o navegador.';
   }
 
   private mapBluetoothError(error: unknown, fallback: string): string {
     const name = String((error as any)?.name || '');
-    if (name === 'NotFoundError') return 'No se seleccionó ninguna impresora.';
+    if (name === 'NotFoundError') return 'No se seleccionÃ³ ninguna impresora.';
     if (name === 'SecurityError') return 'Permiso Bluetooth denegado.';
     if (name === 'NotSupportedError') return 'Bluetooth no soportado en esta plataforma.';
     return fallback;
   }
 }
+
 
