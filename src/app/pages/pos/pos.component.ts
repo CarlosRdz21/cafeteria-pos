@@ -960,7 +960,7 @@ export class PosComponent implements OnInit, OnDestroy {
             customerName: updatedOrder?.customerName,
             notes: 'Productos agregados a comanda existente'
           };
-          void this.printKitchenTicketAfterSave(kitchenDeltaOrder);
+          await this.printKitchenTicketAfterSave(kitchenDeltaOrder);
           this.snackBar.open('Items agregados a la orden', 'Cerrar', {
             duration: 2000
           });
@@ -1000,7 +1000,7 @@ export class PosComponent implements OnInit, OnDestroy {
 
         const createdOrder = await this.pendingOrdersService.createPendingOrder(payload);
         if (createdOrder) {
-          void this.printKitchenTicketAfterSave(createdOrder as Order);
+          await this.printKitchenTicketAfterSave(createdOrder as Order);
         }
 
         this.snackBar.open('Comanda guardada', 'Cerrar', { duration: 2000 });
@@ -1133,8 +1133,8 @@ export class PosComponent implements OnInit, OnDestroy {
     }
 
     const dialogRef = this.dialog.open(DrinkOptionsDialogComponent, {
-      width: '680px',
-      maxWidth: '96vw',
+      width: '920px',
+      maxWidth: '90vw',
       data: {
         product,
         categoryName,
@@ -1354,11 +1354,17 @@ type DrinkOptionsDialogData = {
     </mat-dialog-actions>
   `,
   styles: [`
+    h2[mat-dialog-title] {
+      margin-bottom: 2px; // Reducir espacio debajo del título
+    }
+
     .drink-dialog-content {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 8px;
       min-width: 320px;
+      overflow: visible;
+      box-sizing: border-box;
     }
 
     .hint {
@@ -1421,6 +1427,7 @@ type DrinkOptionsDialogData = {
       display: flex;
       flex-direction: column;
       gap: 4px;
+      margin-bottom: 8px;
     }
 
     .preview-label {
@@ -1433,12 +1440,25 @@ type DrinkOptionsDialogData = {
       font-weight: 700;
       font-size: 16px;
     }
+    
+    mat-dialog-content {
+      padding-top: 4px;
+      display: block;
+      max-height: none !important;
+      overflow: visible !important;
+      padding-bottom: 8px;
+    }
+
+    mat-dialog-actions {
+      margin-top: 0px;
+      padding: 12px 16px 16px 16px;
+      padding-top: 8px;
+      justify-content: flex-end;
+    }
 
     @media (max-width: 480px) {
       .drink-dialog-content {
         min-width: 0;
-        max-height: min(68vh, 560px);
-        overflow: auto;
       }
 
       .option-grid.cols-3 {
@@ -1452,7 +1472,6 @@ type DrinkOptionsDialogData = {
 
     @media (min-width: 481px) {
       .drink-dialog-content {
-        max-height: unset;
         overflow: visible;
       }
     }

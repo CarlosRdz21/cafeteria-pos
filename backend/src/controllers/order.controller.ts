@@ -11,7 +11,18 @@ export class OrderController {
 
   static async create(req: Request, res: Response) {
     try {
-      const { items, status, paymentMethod, amountPaid, paymentDetails, discountTotal, appliedPromotions } = req.body;
+      const {
+        items,
+        status,
+        paymentMethod,
+        amountPaid,
+        paymentDetails,
+        discountTotal,
+        appliedPromotions,
+        tableNumber,
+        customerName,
+        notes
+      } = req.body;
 
       if (!items || items.length === 0) {
         return res.status(400).json({ error: 'La orden está vacía' });
@@ -33,6 +44,9 @@ export class OrderController {
           discountTotal: Number(discountTotal || 0),
           appliedPromotions: appliedPromotions ?? null,
           status: status ?? 'pending',
+          tableNumber,
+          customerName,
+          notes,
           items: {
             create: items.map((item: any) => ({
               productId: item.productId,
@@ -43,6 +57,9 @@ export class OrderController {
             }))
           }
 
+        },
+        include: {
+          items: true
         }
       });
 
