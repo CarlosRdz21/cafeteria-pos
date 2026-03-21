@@ -20,6 +20,7 @@ const supplies_routes_1 = __importDefault(require("./routes/supplies.routes"));
 const supply_categories_routes_1 = __importDefault(require("./routes/supply-categories.routes"));
 const supply_movements_routes_1 = __importDefault(require("./routes/supply-movements.routes"));
 const expenses_routes_1 = __importDefault(require("./routes/expenses.routes"));
+const printer_settings_routes_1 = __importDefault(require("./routes/printer-settings.routes"));
 const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -74,6 +75,27 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json({ limit: jsonBodyLimit }));
 app.use(express_1.default.urlencoded({ extended: true, limit: jsonBodyLimit }));
+app.get('/', (_req, res) => {
+    res.json({
+        ok: true,
+        service: 'cafeteria-pos-backend',
+        timestamp: new Date().toISOString()
+    });
+});
+app.get('/health', (_req, res) => {
+    res.json({
+        ok: true,
+        status: 'healthy',
+        timestamp: new Date().toISOString()
+    });
+});
+app.get('/api/health', (_req, res) => {
+    res.json({
+        ok: true,
+        status: 'healthy',
+        timestamp: new Date().toISOString()
+    });
+});
 app.use('/api/auth', auth_routes_1.default);
 app.use('/api/orders', order_routes_1.default);
 app.use('/api/payments', payment_routes_1.default);
@@ -85,6 +107,7 @@ app.use('/api/supplies', supplies_routes_1.default);
 app.use('/api/supply-categories', supply_categories_routes_1.default);
 app.use('/api/supply-movements', supply_movements_routes_1.default);
 app.use('/api/expenses', expenses_routes_1.default);
+app.use('/api/printer-settings', printer_settings_routes_1.default);
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: {

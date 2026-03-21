@@ -9,7 +9,7 @@ const cash_registers_controller_1 = require("./cash-registers.controller");
 class OrderController {
     static async create(req, res) {
         try {
-            const { items, status, paymentMethod, amountPaid, paymentDetails, discountTotal, appliedPromotions } = req.body;
+            const { items, status, paymentMethod, amountPaid, paymentDetails, discountTotal, appliedPromotions, tableNumber, customerName, notes } = req.body;
             if (!items || items.length === 0) {
                 return res.status(400).json({ error: 'La orden está vacía' });
             }
@@ -24,6 +24,9 @@ class OrderController {
                     discountTotal: Number(discountTotal || 0),
                     appliedPromotions: appliedPromotions ?? null,
                     status: status ?? 'pending',
+                    tableNumber,
+                    customerName,
+                    notes,
                     items: {
                         create: items.map((item) => ({
                             productId: item.productId,
@@ -33,6 +36,9 @@ class OrderController {
                             subtotal: item.subtotal
                         }))
                     }
+                },
+                include: {
+                    items: true
                 }
             });
             // Si la orden ya estÃ¡ completada, registrar el pago para que aparezca en reportes

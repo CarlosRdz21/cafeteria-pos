@@ -8,6 +8,11 @@ class AuthRepository {
         const exact = username.trim();
         // MySQL nuevo: campo username
         try {
+            const byExactUsername = await prisma_1.prisma.user.findFirst({
+                where: { username: exact }
+            });
+            if (byExactUsername)
+                return byExactUsername;
             const byUsername = await prisma_1.prisma.user.findUnique({
                 where: { username: normalized }
             });

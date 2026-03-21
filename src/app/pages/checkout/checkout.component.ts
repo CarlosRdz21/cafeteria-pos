@@ -253,12 +253,12 @@ import { buildApiUrl } from '../../core/config/server.config';
   `,
   styles: [`
     .checkout-container {
-      min-height: 100vh;
+      min-height: var(--app-viewport-height);
       background-color: #f5f5f5;
-      padding: 20px;
+      padding: 20px 20px calc(24px + var(--app-safe-bottom));
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
     }
 
     .checkout-card {
@@ -473,6 +473,11 @@ import { buildApiUrl } from '../../core/config/server.config';
       gap: 12px;
       padding: 16px;
       flex-wrap: wrap;
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      padding-bottom: calc(16px + var(--app-safe-bottom));
     }
 
     mat-card-actions button {
@@ -481,7 +486,7 @@ import { buildApiUrl } from '../../core/config/server.config';
 
     @media (max-width: 768px) {
       .checkout-container {
-        padding: 0;
+        padding: 0 0 calc(16px + var(--app-safe-bottom));
         align-items: flex-start;
       }
 

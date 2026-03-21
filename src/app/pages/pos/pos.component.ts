@@ -1,5 +1,6 @@
 ﻿import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -45,18 +46,18 @@ import { buildApiUrl } from '../../core/config/server.config';
     MatTooltipModule
   ],
   template: `
-    <div class="pos-container">
-      <!-- Toolbar -->
-      <mat-toolbar color="primary" class="toolbar">
-        <mat-icon>local_cafe</mat-icon>
-        <span class="toolbar-title">Dulce Aroma Café</span>
-        <span class="toolbar-subtitle" *ngIf="addToOrderId">
-          (Agregando a Orden #{{addToOrderId}})
+      <div class="pos-container">
+        <!-- Toolbar -->
+        <mat-toolbar color="primary" class="toolbar">
+          <img class="toolbar-logo" src="assets/images/Logo-Cafeteria.png" alt="Logo Dulce Aroma Cafe" />
+          <span class="toolbar-title">Dulce Aroma Café</span>
+          <span class="toolbar-subtitle" *ngIf="addToOrderId">
+            (Agregando a Orden #{{addToOrderId}})
         </span>
         <span class="spacer"></span>
         
         <!-- Indicador de conexión -->
-        <button mat-icon-button [matTooltip]="isConnected ? 'Conectado al servidor' : 'Desconectado'" (click)="goToSettings()">
+        <button mat-icon-button *ngIf="isAdmin()" [matTooltip]="isConnected ? 'Conectado al servidor' : 'Desconectado'" (click)="goToSettings()">
           <mat-icon [class.connected]="isConnected" [class.disconnected]="!isConnected">
             {{ isConnected ? 'wifi' : 'wifi_off' }}
           </mat-icon>
@@ -155,13 +156,23 @@ import { buildApiUrl } from '../../core/config/server.config';
         </div>
 
         <!-- Panel de orden actual -->
-        <div class="order-panel">
-          <div class="order-header">
-            <h2>Orden Actual</h2>
-            <button mat-icon-button color="warn" (click)="clearOrder()" 
-                    *ngIf="currentOrder.length > 0">
-              <mat-icon>delete</mat-icon>
-            </button>
+        <div class="order-panel" [class.mobile-collapsed]="isMobileLayout && !orderPanelExpanded">
+          <div class="order-header" [class.interactive]="isMobileLayout" (click)="toggleOrderPanel()">
+            <div class="order-heading">
+              <h2>Orden Actual</h2>
+              <p class="order-summary" *ngIf="isMobileLayout && currentOrder.length > 0">
+                {{ currentOrder.length }} {{ currentOrder.length === 1 ? 'producto' : 'productos' }} · \${{totals.total.toFixed(2)}}
+              </p>
+            </div>
+            <div class="order-header-actions">
+              <button mat-icon-button type="button" *ngIf="isMobileLayout" (click)="toggleOrderPanel($event)">
+                <mat-icon>{{ orderPanelExpanded ? 'expand_more' : 'expand_less' }}</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" type="button" (click)="clearOrder(); $event.stopPropagation()" 
+                      *ngIf="currentOrder.length > 0">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
           </div>
 
           <div class="order-items" *ngIf="currentOrder.length > 0; else emptyOrder">
@@ -252,6 +263,13 @@ import { buildApiUrl } from '../../core/config/server.config';
       position: sticky;
       top: 0;
       z-index: 100;
+    }
+
+    .toolbar-logo {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      flex-shrink: 0;
     }
 
     .toolbar-title {
@@ -403,9 +421,33 @@ import { buildApiUrl } from '../../core/config/server.config';
       border-bottom: 1px solid #e0e0e0;
     }
 
+    .order-header.interactive {
+      cursor: pointer;
+    }
+
+    .order-heading {
+      min-width: 0;
+    }
+
     .order-header h2 {
       margin: 0;
       font-size: 20px;
+    }
+
+    .order-summary {
+      margin: 4px 0 0;
+      color: rgba(0,0,0,0.62);
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .order-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
     }
 
     .order-items {
@@ -542,36 +584,77 @@ import { buildApiUrl } from '../../core/config/server.config';
     }
 
     @media (max-width: 768px) {
+      .pos-container {
+        height: auto;
+        min-height: calc(100dvh - var(--app-safe-top) - var(--app-safe-bottom));
+      }
+
       .main-content {
         flex-direction: column;
+        overflow: visible;
+      }
+
+      .products-panel {
+        flex: 1 1 auto;
+        padding: 12px 12px 104px;
+        overflow: visible;
       }
 
       .order-panel {
         min-width: unset;
+        width: 100%;
         border-left: none;
         border-top: 1px solid #e0e0e0;
-        max-height: 50vh;
+        max-height: min(68dvh, 560px);
+        position: sticky;
+        bottom: 0;
+        z-index: 40;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -8px 24px rgba(0,0,0,0.12);
       }
 
       .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-      }
-
-      .products-panel {
-        padding: 12px;
-      }
-
-      .product-card {
-        padding: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
       }
 
       .product-image {
-        height: 120px;
+        height: 108px;
+      }
+
+      .product-card h3 {
+        font-size: 15px;
+        line-height: 1.25;
+      }
+
+      .product-description {
+        display: none;
+      }
+
+      .price {
+        font-size: 16px;
       }
 
       .category-filters {
         overflow-x: auto;
+      }
+
+      .order-panel.mobile-collapsed .order-items,
+      .order-panel.mobile-collapsed .order-totals,
+      .order-panel.mobile-collapsed .empty-order {
+        display: none;
+      }
+
+      .order-panel.mobile-collapsed {
+        max-height: none;
+      }
+
+      .order-header {
+        padding: 12px 14px;
+      }
+
+      .order-header h2 {
+        font-size: 18px;
       }
 
       .payment-buttons {
@@ -599,6 +682,18 @@ import { buildApiUrl } from '../../core/config/server.config';
     @media (max-width: 480px) {
       .products-grid {
         grid-template-columns: repeat(2, 1fr);
+      }
+
+      .product-image {
+        height: 96px;
+      }
+
+      .product-card h3 {
+        font-size: 14px;
+      }
+
+      .price {
+        font-size: 15px;
       }
 
       .toolbar-title {
@@ -632,6 +727,8 @@ export class PosComponent implements OnInit, OnDestroy {
   totals = { subtotal: 0, tax: 0, total: 0 };
   addToOrderId?: number; // ID de orden pendiente si estamos agregando items
   isConnected = false;
+  isMobileLayout = false;
+  orderPanelExpanded = false;
   
   private subscription = new Subscription();
 
@@ -650,7 +747,13 @@ export class PosComponent implements OnInit, OnDestroy {
     private http: HttpClient
   ) {}
 
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateResponsiveState();
+  }
+
   async ngOnInit() {
+    this.updateResponsiveState();
     await this.cashRegisterService.ensureInitialized();
     // Verificar que haya caja abierta
     if (!this.cashRegisterService.isRegisterOpen() && !this.authService.isAdmin()) {
@@ -719,6 +822,9 @@ export class PosComponent implements OnInit, OnDestroy {
       this.orderService.currentOrder$.subscribe(order => {
         this.currentOrder = order;
         this.totals = this.orderService.calculateTotals();
+        if (!this.isMobileLayout) {
+          this.orderPanelExpanded = true;
+        }
       })
     );
 
@@ -736,6 +842,15 @@ export class PosComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.subscription.unsubscribe();
+  }
+
+  toggleOrderPanel(event?: Event) {
+    if (!this.isMobileLayout) {
+      return;
+    }
+
+    event?.stopPropagation();
+    this.orderPanelExpanded = !this.orderPanelExpanded;
   }
 
   async loadProducts() {
@@ -978,6 +1093,8 @@ export class PosComponent implements OnInit, OnDestroy {
       title: 'Guardar comanda',
       message: 'Número de mesa (opcional)',
       label: 'Mesa',
+      inputType: 'number',
+      placeholder: 'Solo números',
       confirmText: 'Continuar'
     });
       const customerName = await this.uiDialog.prompt({
@@ -1073,6 +1190,13 @@ export class PosComponent implements OnInit, OnDestroy {
 
   isAdminOrBarista(): boolean {
     return this.authService.hasRole('admin', 'barista');
+  }
+
+  private updateResponsiveState() {
+    this.isMobileLayout = typeof window !== 'undefined' && window.innerWidth <= 768;
+    if (!this.isMobileLayout) {
+      this.orderPanelExpanded = true;
+    }
   }
 
   async logout() {

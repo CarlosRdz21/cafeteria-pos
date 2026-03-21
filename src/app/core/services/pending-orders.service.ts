@@ -20,6 +20,35 @@ export class PendingOrdersService {
       .subscribe(orders => this.pendingOrdersSubject.next(orders));
   }
 
+  upsertPendingOrder(order: Order) {
+    const current = this.pendingOrdersSubject.value;
+    const index = current.findIndex(existing => existing.id === order.id);
+
+    if (order.status !== 'pending') {
+      if (index >= 0) {
+        const next = [...current];
+        next.splice(index, 1);
+        this.pendingOrdersSubject.next(next);
+      }
+      return;
+    }
+
+    if (index >= 0) {
+      const next = [...current];
+      next[index] = order;
+      this.pendingOrdersSubject.next(next);
+      return;
+    }
+
+    this.pendingOrdersSubject.next([order, ...current]);
+  }
+
+  removePendingOrder(orderId: number) {
+    this.pendingOrdersSubject.next(
+      this.pendingOrdersSubject.value.filter(order => order.id !== orderId)
+    );
+  }
+
   async createPendingOrder(payload: any) {
     return this.http.post<Order>(this.API, payload).toPromise();
   }

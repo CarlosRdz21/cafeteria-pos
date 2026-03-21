@@ -82,6 +82,12 @@ export class OrderController {
         await CashRegistersController.applySaleToOpenRegister(paymentMethod, total);
       }
 
+      if ((status ?? 'pending') === 'pending') {
+        const io = getIO();
+        io.to('baristas').emit('new-order', order);
+        io.to('admins').emit('new-order', order);
+      }
+
       res.status(201).json(order);
     } catch (error: any) {
       console.error('❌ Error creating order:', error);
@@ -247,7 +253,21 @@ export class OrderController {
         }
       }
 
-      res.json({ success: true });
+      const updatedOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true }
+      });
+
+      if (!updatedOrder) {
+        return res.status(404).json({ error: 'Orden no encontrada' });
+      }
+
+      const io = getIO();
+      io.to('waiters').emit('order-updated', updatedOrder);
+      io.to('baristas').emit('order-updated', updatedOrder);
+      io.to('admins').emit('order-updated', updatedOrder);
+
+      res.json(updatedOrder);
 
     } catch (error: any) {
       console.error('❌ Error updating order:', error);
@@ -273,6 +293,7 @@ export class OrderController {
 
       // 🔔 Notificar por socket
       const io = getIO();
+      io.to('baristas').emit('order-cancelled', order.id);
       io.to('waiters').emit('order-updated', order);
       io.to('admins').emit('order-updated', order);
 

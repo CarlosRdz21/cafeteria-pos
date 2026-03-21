@@ -27,13 +27,13 @@ import { finalize } from 'rxjs/operators';
   ],
   template: `
     <div class="login-container">
-      <mat-card class="login-card">
-        <mat-card-header>
-          <div class="logo">
-            <mat-icon>local_cafe</mat-icon>
-          </div>
-          <mat-card-title>Dulce Aroma Café POS</mat-card-title>
-        </mat-card-header>
+        <mat-card class="login-card">
+          <mat-card-header>
+            <div class="logo">
+              <img src="assets/images/Logo-Cafeteria.png" alt="Logo Dulce Aroma Cafe" />
+            </div>
+            <mat-card-title>Dulce Aroma Café POS</mat-card-title>
+          </mat-card-header>
 
         <mat-card-content>
           <form (ngSubmit)="onLogin()">
@@ -109,21 +109,18 @@ import { finalize } from 'rxjs/operators';
     }
 
     .logo {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      width: 120px;
+      height: 120px;
       display: flex;
       justify-content: center;
       align-items: center;
       margin-bottom: 20px;
     }
 
-    .logo mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      color: white;
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     mat-card-title {

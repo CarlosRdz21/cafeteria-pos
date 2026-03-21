@@ -24,6 +24,7 @@ export type PromptDialogOptions = {
   cancelText?: string;
   required?: boolean;
   rows?: number;
+  inputType?: 'text' | 'number';
 };
 
 @Injectable({ providedIn: 'root' })
@@ -112,8 +113,10 @@ export class AppConfirmDialogComponent {
         <ng-template #inputTemplate>
           <input
             matInput
+            [type]="data.inputType || 'text'"
             [(ngModel)]="value"
             [placeholder]="data.placeholder || ''"
+            [attr.inputmode]="data.inputType === 'number' ? 'numeric' : null"
           />
         </ng-template>
       </mat-form-field>
@@ -155,11 +158,18 @@ export class AppPromptDialogComponent {
     return !!this.data.required && !this.value.trim();
   }
 
+  private normalizeValue(): string {
+    if (this.data.inputType === 'number') {
+      return this.value.replace(/[^\d]/g, '').trim();
+    }
+    return this.value.trim();
+  }
+
   cancel() {
     this.dialogRef.close(null);
   }
 
   confirm() {
-    this.dialogRef.close(this.value);
+    this.dialogRef.close(this.normalizeValue());
   }
 }

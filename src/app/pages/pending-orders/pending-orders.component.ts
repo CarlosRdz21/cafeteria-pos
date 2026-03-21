@@ -63,10 +63,15 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
           </mat-card-header>
 
           <mat-card-content>
-
-            <div class="customer-info" *ngIf="order.customerName">
-              <mat-icon>person</mat-icon>
-              <span>{{ order.customerName }}</span>
+            <div class="meta-info" *ngIf="order.tableNumber || order.customerName">
+              <div class="meta-row" *ngIf="order.tableNumber">
+                <mat-icon>table_restaurant</mat-icon>
+                <span><strong>Mesa:</strong> {{ order.tableNumber }}</span>
+              </div>
+              <div class="meta-row" *ngIf="order.customerName">
+                <mat-icon>person</mat-icon>
+                <span><strong>Cliente:</strong> {{ order.customerName }}</span>
+              </div>
             </div>
 
             <div class="time-info">
@@ -168,13 +173,28 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
       color: #1976d2;
     }
 
-    .customer-info,
+    .meta-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      background: #f8fbff;
+      border: 1px solid #e3f2fd;
+      border-radius: 10px;
+    }
+
+    .meta-row,
     .time-info {
       display: flex;
       gap: 8px;
-      margin-bottom: 8px;
+      align-items: center;
       font-size: 14px;
       color: rgba(0,0,0,.7);
+    }
+
+    .time-info {
+      margin-bottom: 8px;
     }
 
     .items-summary {
@@ -248,6 +268,7 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
 
   pendingOrders: Order[] = [];
   private sub = new Subscription();
+  private audioContext?: AudioContext;
 
   constructor(
     private pendingOrdersService: PendingOrdersService,
@@ -268,18 +289,35 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
 
     this.sub.add(
       this.socketService.newOrderNotification$
-        .subscribe(() => this.loadOrders())
+        .subscribe(order => {
+          if (!order) return;
+          this.pendingOrdersService.upsertPendingOrder(order);
+          this.playNotificationTone();
+          this.snackBar.open(`Nueva comanda #${order.id} recibida`, 'Cerrar', {
+            duration: 3000
+          });
+        })
     );
 
     this.sub.add(
       this.socketService.orderUpdatedNotification$
-        .subscribe(() => this.loadOrders())
+        .subscribe(order => {
+          if (!order) return;
+          this.pendingOrdersService.upsertPendingOrder(order);
+        })
+    );
+
+    this.sub.add(
+      this.socketService.orderCancelledNotification$
+        .subscribe(orderId => {
+          if (!orderId) return;
+          this.pendingOrdersService.removePendingOrder(orderId);
+        })
     );
   }
 
   ngOnDestroy() {
     this.sub.unsubscribe();
-    this.socketService.disconnect();
   }
 
   loadOrders() {
@@ -355,6 +393,47 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
 
   goToPos() {
     this.router.navigate(['/pos']);
+  }
+
+  private playNotificationTone() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    this.audioContext ??= new AudioContextCtor();
+
+    if (this.audioContext.state === 'suspended') {
+      void this.audioContext.resume().catch(() => undefined);
+    }
+
+    const startAt = this.audioContext.currentTime + 0.02;
+    const pattern = [
+      { offset: 0, duration: 0.12, frequency: 880 },
+      { offset: 0.18, duration: 0.12, frequency: 1174 }
+    ];
+
+    for (const note of pattern) {
+      const oscillator = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(note.frequency, startAt + note.offset);
+
+      gain.gain.setValueAtTime(0.0001, startAt + note.offset);
+      gain.gain.exponentialRampToValueAtTime(0.16, startAt + note.offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + note.offset + note.duration);
+
+      oscillator.connect(gain);
+      gain.connect(this.audioContext.destination);
+
+      oscillator.start(startAt + note.offset);
+      oscillator.stop(startAt + note.offset + note.duration);
+    }
   }
 }
 

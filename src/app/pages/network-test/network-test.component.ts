@@ -259,7 +259,7 @@ export class NetworkTestComponent {
 
       if (result.ping) {
         const data = await pingResponse.json();
-        result.api = data.status === 'ok';
+        result.api = data?.ok === true || data?.status === 'ok' || data?.status === 'healthy';
         result.details += `✅ API respondió: ${JSON.stringify(data, null, 2)}\n\n`;
       }
     } catch (error: any) {

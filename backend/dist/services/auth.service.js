@@ -9,9 +9,12 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const auth_repository_1 = require("../repositories/auth.repository");
 class AuthService {
     static async login(username, password) {
+        const normalizedUsername = username.trim().toLowerCase();
         const user = await auth_repository_1.AuthRepository.findByUsername(username);
-        if (!user)
+        if (!user) {
+            console.warn(`[auth] login failed: user_not_found username="${normalizedUsername}"`);
             throw new Error('Invalid credentials');
+        }
         const stored = String(user.password || '');
         const looksHashed = /^\$2[aby]\$\d{2}\$/.test(stored);
         let ok = false;
@@ -22,8 +25,11 @@ class AuthService {
             // Compatibilidad temporal con usuarios legacy guardados en texto plano
             ok = stored === password;
         }
-        if (!ok)
+        if (!ok) {
+            console.warn(`[auth] login failed: password_mismatch username="${normalizedUsername}" userId=${user.id} hashed=${looksHashed} storedLength=${stored.length}`);
             throw new Error('Invalid credentials');
+        }
+        console.log(`[auth] login success username="${normalizedUsername}" userId=${user.id} role=${user.role}`);
         const jwtSecret = process.env.JWT_SECRET;
         if (!jwtSecret) {
             throw new Error('JWT_SECRET is not defined');

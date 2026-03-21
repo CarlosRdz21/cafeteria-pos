@@ -301,16 +301,16 @@ import { Subject, takeUntil } from 'rxjs';
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Efectivo Contado</mat-label>
-              <input
-                matInput
-                type="number"
-                [(ngModel)]="closingAmount"
-                (ngModelChange)="calculateDifference()"
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                autofocus
-              />
+               <input
+                 matInput
+                 type="number"
+                 [(ngModel)]="closingAmount"
+                 (ngModelChange)="calculateDifference()"
+                 placeholder="0.00"
+                 step="0.01"
+                 min="0"
+                 autofocus
+               />
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 
@@ -352,8 +352,10 @@ import { Subject, takeUntil } from 'rxjs';
   `,
   styles: [`
     .cash-register-container {
-      min-height: calc(100vh - 64px);
+      min-height: calc(var(--app-viewport-height) - 64px);
       background-color: #f5f5f5;
+      padding-bottom: calc(20px + var(--app-safe-bottom));
+      box-sizing: border-box;
     }
 
     .toolbar-spacer {
@@ -362,11 +364,14 @@ import { Subject, takeUntil } from 'rxjs';
 
     .tab-content {
       padding: 20px;
+      padding-bottom: calc(28px + var(--app-safe-bottom));
+      box-sizing: border-box;
     }
 
     .action-card, .register-info-card {
       max-width: 800px;
       margin: 0 auto;
+      overflow: visible;
     }
 
     .empty-state {
@@ -611,13 +616,14 @@ import { Subject, takeUntil } from 'rxjs';
       justify-content: center;
       align-items: center;
       z-index: 1000;
-      padding: 20px;
+      padding: calc(16px + var(--app-safe-top)) 20px calc(16px + var(--app-safe-bottom));
+      box-sizing: border-box;
     }
 
     .close-dialog {
       width: 100%;
       max-width: 500px;
-      max-height: 90vh;
+      max-height: min(88vh, calc(var(--app-viewport-height) - 40px));
       overflow-y: auto;
     }
 
@@ -685,9 +691,24 @@ import { Subject, takeUntil } from 'rxjs';
       justify-content: flex-end;
       gap: 12px;
       flex-wrap: wrap;
+      position: sticky;
+      bottom: 0;
+      margin: 0 -16px -16px;
+      padding: 12px 16px calc(12px + var(--app-safe-bottom));
+      background: white;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
     }
 
     @media (max-width: 768px) {
+      .cash-register-container {
+        min-height: calc(var(--app-viewport-height) - 56px);
+      }
+
+      .tab-content {
+        padding: 16px;
+        padding-bottom: calc(24px + var(--app-safe-bottom));
+      }
+
       .summary-grid {
         grid-template-columns: 1fr;
       }
@@ -704,6 +725,14 @@ import { Subject, takeUntil } from 'rxjs';
       .detail-row {
         flex-wrap: wrap;
         gap: 6px;
+      }
+
+      .expected-amount {
+        font-size: 30px;
+      }
+
+      .close-dialog {
+        max-height: calc(var(--app-viewport-height) - 24px);
       }
     }
   `]

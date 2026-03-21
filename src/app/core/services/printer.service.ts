@@ -1,7 +1,7 @@
 ﻿import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { CashRegister, Order } from '../models/domain.models';
+import { CashRegister, Order, OrderItem } from '../models/domain.models';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { firstValueFrom } from 'rxjs';
@@ -562,7 +562,11 @@ export class PrinterService {
     commands.push(this.textToBytes((businessInfo?.name || cfg.businessName || 'CAFETERIA') + '\n'));
 
     commands.push(new Uint8Array([ESC, 0x21, 0x00]));
-    commands.push(this.textToBytes((businessInfo?.address || cfg.businessAddress || '') + '\n'));
+    for (const line of this.wrapText((businessInfo?.address || cfg.businessAddress || '').trim(), lineWidth)) {
+      if (line) {
+        commands.push(this.textToBytes(`${line}\n`));
+      }
+    }
     commands.push(this.textToBytes((businessInfo?.phone || cfg.businessPhone || '') + '\n'));
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
 
@@ -572,11 +576,7 @@ export class PrinterService {
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
 
     for (const item of order.items) {
-      const lineTotal = `$${item.subtotal.toFixed(2)}`;
-      const nameLine = this.formatLine(item.name, lineTotal, lineWidth);
-      commands.push(this.textToBytes(nameLine));
-      commands.push(this.textToBytes(`${item.quantity} x $${item.price.toFixed(2)}\n`));
-      commands.push(this.textToBytes('\n'));
+      this.appendWrappedReceiptItem(commands, item, lineWidth);
     }
 
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
@@ -701,10 +701,7 @@ export class PrinterService {
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
 
     for (const item of order.items) {
-      const lineTotal = `$${item.subtotal.toFixed(2)}`;
-      commands.push(this.textToBytes(this.formatLine(item.name, lineTotal, lineWidth)));
-      commands.push(this.textToBytes(`${item.quantity} x $${item.price.toFixed(2)}\n`));
-      commands.push(this.textToBytes('\n'));
+      this.appendWrappedReceiptItem(commands, item, lineWidth);
     }
 
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
@@ -854,6 +851,16 @@ export class PrinterService {
     const cleanValue = value.length > width ? value.slice(0, width) : value;
     const spaceCount = Math.max(1, width - cleanLabel.length - cleanValue.length);
     return `${cleanLabel}${' '.repeat(spaceCount)}${cleanValue}\n`;
+  }
+
+  private appendWrappedReceiptItem(commands: Uint8Array[], item: OrderItem, lineWidth: number) {
+    for (const line of this.wrapText(item.name.trim(), lineWidth)) {
+      commands.push(this.textToBytes(`${line}\n`));
+    }
+
+    commands.push(this.textToBytes(this.formatLine('', `$${item.subtotal.toFixed(2)}`, lineWidth)));
+    commands.push(this.textToBytes(`${item.quantity} x $${item.price.toFixed(2)}\n`));
+    commands.push(this.textToBytes('\n'));
   }
 
   private wrapText(text: string, width: number): string[] {
