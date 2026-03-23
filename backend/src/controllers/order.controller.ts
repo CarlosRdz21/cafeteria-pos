@@ -275,6 +275,72 @@ export class OrderController {
     }
   }
 
+  static async replacePendingOrder(req: Request, res: Response) {
+    try {
+      const orderId = Number(req.params.id);
+      const items = Array.isArray(req.body?.items) ? req.body.items : [];
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'Invalid order id' });
+      }
+
+      if (items.length === 0) {
+        return res.status(400).json({ error: 'La orden debe tener al menos un producto' });
+      }
+
+      const existingOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { items: true }
+      });
+
+      if (!existingOrder) {
+        return res.status(404).json({ error: 'Orden no encontrada' });
+      }
+
+      if (existingOrder.status !== 'pending') {
+        return res.status(400).json({ error: 'Solo se pueden editar comandas pendientes' });
+      }
+
+      const subtotal = items.reduce(
+        (sum: number, item: any) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+        0
+      );
+      const tax = 0;
+      const total = subtotal + tax;
+
+      const updatedOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          subtotal,
+          tax,
+          total,
+          items: {
+            deleteMany: {},
+            create: items.map((item: any) => ({
+              productId: item.productId,
+              name: item.name,
+              quantity: Number(item.quantity || 0),
+              price: Number(item.price || 0),
+              subtotal: Number(item.price || 0) * Number(item.quantity || 0)
+            }))
+          }
+        },
+        include: {
+          items: true
+        }
+      });
+
+      const io = getIO();
+      io.to('waiters').emit('order-updated', updatedOrder);
+      io.to('admins').emit('order-updated', updatedOrder);
+
+      res.json(updatedOrder);
+    } catch (error: any) {
+      console.error('❌ Error replacing pending order items:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
 
 
 

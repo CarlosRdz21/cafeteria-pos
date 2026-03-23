@@ -62,6 +62,12 @@ export class PendingOrdersService {
       .toPromise();
   }
 
+  async replacePendingOrderItems(orderId: number, items: any[]) {
+    return this.http
+      .put<Order>(`${this.API}/${orderId}`, { items })
+      .toPromise();
+  }
+
   async cancelPendingOrder(orderId: number) {
     return this.http
       .patch(`${this.API}/${orderId}/cancel`, {})

@@ -1,4 +1,4 @@
-﻿import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -7,10 +7,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { Subscription } from 'rxjs';
 import { PendingOrdersService } from '../../core/services/pending-orders.service';
-import { Order } from '../../core/models/domain.models';
+import { Order, OrderItem } from '../../core/models/domain.models';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SocketService } from '../../core/services/socket.service';
@@ -47,6 +47,12 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
         <mat-card
           class="order-card"
           *ngFor="let order of pendingOrders"
+          (mousedown)="startLongPress(order)"
+          (mouseup)="clearLongPress()"
+          (mouseleave)="clearLongPress()"
+          (touchstart)="startLongPress(order)"
+          (touchend)="clearLongPress()"
+          (touchcancel)="clearLongPress()"
         >
           <mat-card-header>
             <div class="order-header">
@@ -79,6 +85,10 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
               <span>{{ formatTime(order.createdAt) }}</span>
             </div>
 
+            <div class="hint-line">
+              Mantén presionada la comanda para editar sus productos
+            </div>
+
             <div class="items-summary">
               <div class="item-line" *ngFor="let item of order.items">
                 <span>{{ item.quantity }}x</span>
@@ -90,7 +100,6 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
               <span>Total</span>
               <span class="amount">\${{ order.total.toFixed(2) }}</span>
             </div>
-
           </mat-card-content>
 
           <mat-card-actions>
@@ -114,7 +123,6 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
               Cancelar
             </button>
           </mat-card-actions>
-
         </mat-card>
       </div>
 
@@ -148,6 +156,7 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
 
     .order-card {
       transition: transform .2s, box-shadow .2s;
+      cursor: pointer;
     }
 
     .order-card:hover {
@@ -195,6 +204,13 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
 
     .time-info {
       margin-bottom: 8px;
+    }
+
+    .hint-line {
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: rgba(25,118,210,.8);
+      font-weight: 600;
     }
 
     .items-summary {
@@ -265,10 +281,10 @@ import { UiDialogService } from '../../core/services/ui-dialog.service';
   `]
 })
 export class PendingOrdersComponent implements OnInit, OnDestroy {
-
   pendingOrders: Order[] = [];
   private sub = new Subscription();
   private audioContext?: AudioContext;
+  private pressTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private pendingOrdersService: PendingOrdersService,
@@ -276,7 +292,8 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
     private uiDialog: UiDialogService,
     private router: Router,
     private snackBar: MatSnackBar,
-    private socketService: SocketService
+    private socketService: SocketService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit() {
@@ -317,6 +334,7 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.clearLongPress();
     this.sub.unsubscribe();
   }
 
@@ -356,10 +374,65 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
     );
   }
 
-
   addItems(order: Order) {
     this.router.navigate(['/pos'], {
       queryParams: { addToOrderId: order.id }
+    });
+  }
+
+  startLongPress(order: Order) {
+    this.clearLongPress();
+    this.pressTimer = setTimeout(() => {
+      void this.openEditOrder(order);
+    }, 650);
+  }
+
+  clearLongPress() {
+    if (!this.pressTimer) {
+      return;
+    }
+
+    clearTimeout(this.pressTimer);
+    this.pressTimer = null;
+  }
+
+  async openEditOrder(order: Order) {
+    const confirmed = await this.uiDialog.confirm({
+      title: 'Editar comanda',
+      message: `¿Deseas editar la comanda #${order.id}?`,
+      confirmText: 'Editar'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(PendingOrderEditDialogComponent, {
+      width: '700px',
+      maxWidth: '95vw',
+      data: { order }
+    });
+
+    dialogRef.afterClosed().subscribe(async (items?: OrderItem[]) => {
+      if (!items || !items.length || !order.id) {
+        return;
+      }
+
+      try {
+        const updatedOrder = await this.pendingOrdersService.replacePendingOrderItems(order.id, items);
+        if (!updatedOrder) {
+          throw new Error('No updated order returned');
+        }
+
+        this.pendingOrdersService.upsertPendingOrder(updatedOrder);
+        this.snackBar.open(`Comanda #${order.id} actualizada`, 'Cerrar', {
+          duration: 2500
+        });
+      } catch {
+        this.snackBar.open('No se pudo actualizar la comanda', 'Cerrar', {
+          duration: 3000
+        });
+      }
     });
   }
 
@@ -375,17 +448,13 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
       await this.pendingOrdersService.cancelPendingOrder(order.id!);
 
       this.snackBar.open('Orden cancelada', 'Cerrar', { duration: 2000 });
-
-      // FORZAR RECARGA
       this.loadOrders();
-
-    } catch (e) {
+    } catch {
       this.snackBar.open('Error al cancelar la orden', 'Cerrar', {
         duration: 3000
       });
     }
   }
-
 
   goBack() {
     this.router.navigate(['/pos']);
@@ -437,4 +506,210 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
   }
 }
 
+@Component({
+  selector: 'app-pending-order-edit-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule
+  ],
+  template: `
+    <div class="dialog-shell">
+      <div class="dialog-header">
+        <h2>Editar comanda #{{ data.order.id }}</h2>
+        <p>Quita o ajusta productos si el cliente hizo cambios.</p>
+      </div>
 
+      <div class="item-list">
+        <div class="item-row" *ngFor="let item of items; let i = index">
+          <div class="item-main">
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-price">\${{ item.price.toFixed(2) }} c/u</div>
+          </div>
+
+          <div class="item-actions">
+            <button mat-icon-button type="button" (click)="decreaseQuantity(i)" [disabled]="item.quantity <= 1">
+              <mat-icon>remove</mat-icon>
+            </button>
+            <span class="qty">{{ item.quantity }}</span>
+            <button mat-icon-button type="button" (click)="increaseQuantity(i)">
+              <mat-icon>add</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" type="button" (click)="removeItem(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-message" *ngIf="items.length === 0">
+        La comanda se quedó sin productos. Cierra este editor y usa Cancelar si deseas anularla completa.
+      </div>
+
+      <div class="summary-box">
+        <div>Total actualizado</div>
+        <strong>\${{ total.toFixed(2) }}</strong>
+      </div>
+
+      <div class="dialog-actions">
+        <button mat-button type="button" (click)="dialogRef.close()">Cancelar</button>
+        <button mat-raised-button color="primary" type="button" (click)="save()" [disabled]="items.length === 0">
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .dialog-shell {
+      padding-top: 8px;
+      min-width: min(640px, 88vw);
+    }
+
+    .dialog-header h2 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .dialog-header p {
+      margin: 0;
+      color: rgba(0,0,0,.68);
+    }
+
+    .item-list {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      background: #fafafa;
+    }
+
+    .item-main {
+      min-width: 0;
+    }
+
+    .item-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .item-price {
+      color: rgba(0,0,0,.65);
+      font-size: 14px;
+    }
+
+    .item-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .qty {
+      min-width: 28px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .empty-message {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #fff3e0;
+      color: #8a5300;
+      font-size: 14px;
+    }
+
+    .summary-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #eff6ff, #eef2ff);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 18px;
+    }
+
+    .dialog-actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .dialog-shell {
+        min-width: 0;
+      }
+
+      .item-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .item-actions {
+        justify-content: flex-end;
+      }
+    }
+  `]
+})
+export class PendingOrderEditDialogComponent {
+  items: OrderItem[];
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public data: { order: Order },
+    public dialogRef: MatDialogRef<PendingOrderEditDialogComponent>
+  ) {
+    this.items = data.order.items.map(item => ({
+      ...item,
+      subtotal: Number(item.price) * Number(item.quantity)
+    }));
+  }
+
+  get total(): number {
+    return this.items.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+  }
+
+  increaseQuantity(index: number) {
+    const item = this.items[index];
+    item.quantity += 1;
+    item.subtotal = Number(item.price) * Number(item.quantity);
+  }
+
+  decreaseQuantity(index: number) {
+    const item = this.items[index];
+    if (item.quantity <= 1) {
+      return;
+    }
+
+    item.quantity -= 1;
+    item.subtotal = Number(item.price) * Number(item.quantity);
+  }
+
+  removeItem(index: number) {
+    this.items.splice(index, 1);
+  }
+
+  save() {
+    this.dialogRef.close(
+      this.items.map(item => ({
+        ...item,
+        subtotal: Number(item.price) * Number(item.quantity)
+      }))
+    );
+  }
+}
