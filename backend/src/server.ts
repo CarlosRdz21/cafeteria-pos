@@ -17,6 +17,7 @@ import supplyCategoriesRoutes from './routes/supply-categories.routes';
 import supplyMovementsRoutes from './routes/supply-movements.routes';
 import expensesRoutes from './routes/expenses.routes';
 import printerSettingsRoutes from './routes/printer-settings.routes';
+import promotionsRoutes from './routes/promotions.routes';
 
 import paymentRoutes from './routes/payment.routes';
 
@@ -116,6 +117,7 @@ app.use('/api/supply-categories', supplyCategoriesRoutes);
 app.use('/api/supply-movements', supplyMovementsRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
+app.use('/api/promotions', promotionsRoutes);
 
 const httpServer = createServer(app);
 

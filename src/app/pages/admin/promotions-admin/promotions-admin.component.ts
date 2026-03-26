@@ -300,6 +300,7 @@ export class PromotionsAdminComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    await this.promotionService.ensureLoaded();
     this.promotions = this.promotionService.getPromotions();
     await this.loadCatalog();
   }
@@ -333,7 +334,7 @@ export class PromotionsAdminComponent implements OnInit {
     }
   }
 
-  savePromotion() {
+  async savePromotion() {
     if (!this.editingPromotion) return;
     const draft = {
       ...this.editingPromotion,
@@ -376,14 +377,14 @@ export class PromotionsAdminComponent implements OnInit {
       }
     }
 
-    this.promotionService.savePromotion(draft);
+    await this.promotionService.savePromotion(draft);
     this.promotions = this.promotionService.getPromotions();
     this.cancelEdit();
     this.snackBar.open('Promoción guardada', 'Cerrar', { duration: 2200 });
   }
 
-  deletePromotion(id: string) {
-    this.promotionService.deletePromotion(id);
+  async deletePromotion(id: string) {
+    await this.promotionService.deletePromotion(id);
     this.promotions = this.promotionService.getPromotions();
     if (this.originalPromotionId === id) {
       this.cancelEdit();

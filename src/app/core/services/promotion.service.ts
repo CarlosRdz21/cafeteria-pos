@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 import { OrderItem, Product } from '../models/domain.models';
+import { firstValueFrom } from 'rxjs';
+import { buildApiUrl } from '../config/server.config';
 
 export type PromotionType = 'percentage_discount' | 'bundle_price';
 export type PromotionScope = 'all' | 'category' | 'product';
@@ -51,15 +54,21 @@ type ExpandedOrderUnit = {
 })
 export class PromotionService {
   private readonly storageKey = 'cafeteria-pos.promotions.v1';
+  private readonly promotionsApi = buildApiUrl('promotions');
   private readonly promotionsSubject = new BehaviorSubject<Promotion[]>(this.loadPromotions());
+  private loadPromise: Promise<Promotion[]> | null = null;
 
   readonly promotions$ = this.promotionsSubject.asObservable();
+
+  constructor(private http: HttpClient) {
+    void this.loadRemotePromotions().catch(() => undefined);
+  }
 
   getPromotions(): Promotion[] {
     return this.promotionsSubject.value;
   }
 
-  savePromotion(promotion: Promotion): void {
+  async savePromotion(promotion: Promotion): Promise<void> {
     const current = this.getPromotions();
     const index = current.findIndex(item => item.id === promotion.id);
     const next = [...current];
@@ -68,11 +77,26 @@ export class PromotionService {
     } else {
       next.push(this.normalizePromotion(promotion));
     }
+    const normalizedPromotion = this.normalizePromotion(promotion);
     this.persistPromotions(next);
+
+    try {
+      const saved = await firstValueFrom(this.http.put<Partial<Promotion>>(this.promotionsApi, normalizedPromotion));
+      const merged = saved ? this.normalizePromotion(saved) : normalizedPromotion;
+      const refreshed = this.getPromotions().map(item => item.id === merged.id ? merged : item);
+      this.persistPromotions(refreshed);
+    } catch {
+      // Mantener cache local si el servidor no está disponible.
+    }
   }
 
-  deletePromotion(id: string): void {
+  async deletePromotion(id: string): Promise<void> {
     this.persistPromotions(this.getPromotions().filter(item => item.id !== id));
+    try {
+      await firstValueFrom(this.http.delete(`${this.promotionsApi}/${encodeURIComponent(id)}`));
+    } catch {
+      // Mantener cache local si el servidor no está disponible.
+    }
   }
 
   createDraftPromotion(): Promotion {
@@ -144,6 +168,10 @@ export class PromotionService {
     };
   }
 
+  async ensureLoaded(force: boolean = false): Promise<Promotion[]> {
+    return this.loadRemotePromotions(force);
+  }
+
   private loadPromotions(): Promotion[] {
     try {
       const raw = localStorage.getItem(this.storageKey);
@@ -160,6 +188,27 @@ export class PromotionService {
     const normalized = promotions.map(item => this.normalizePromotion(item));
     localStorage.setItem(this.storageKey, JSON.stringify(normalized));
     this.promotionsSubject.next(normalized);
+  }
+
+  private async loadRemotePromotions(force: boolean = false): Promise<Promotion[]> {
+    if (!force && this.loadPromise) {
+      return this.loadPromise;
+    }
+
+    this.loadPromise = firstValueFrom(this.http.get<Partial<Promotion>[]>(this.promotionsApi))
+      .then(rows => {
+        const normalized = Array.isArray(rows)
+          ? rows.map(row => this.normalizePromotion(row))
+          : [];
+        this.persistPromotions(normalized);
+        return normalized;
+      })
+      .catch(() => this.getPromotions())
+      .finally(() => {
+        this.loadPromise = null;
+      });
+
+    return this.loadPromise;
   }
 
   private normalizePromotion(value: Partial<Promotion>): Promotion {
