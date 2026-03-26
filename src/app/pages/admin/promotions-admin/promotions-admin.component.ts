@@ -337,7 +337,12 @@ export class PromotionsAdminComponent implements OnInit {
     if (!this.editingPromotion) return;
     const draft = {
       ...this.editingPromotion,
-      name: this.editingPromotion.name.trim()
+      name: this.editingPromotion.name.trim(),
+      categoryNames: this.editingPromotion.scope === 'category'
+        ? this.categories
+            .filter(category => category.id != null && this.editingPromotion!.categoryIds.includes(category.id))
+            .map(category => category.name)
+        : []
     };
 
     if (!draft.name) {

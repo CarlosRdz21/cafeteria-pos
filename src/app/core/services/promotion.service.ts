@@ -13,6 +13,7 @@ export interface Promotion {
   scope: PromotionScope;
   productIds: number[];
   categoryIds: number[];
+  categoryNames: string[];
   percentageOff?: number;
   bundleQuantity?: number;
   bundlePrice?: number;
@@ -83,6 +84,7 @@ export class PromotionService {
       scope: 'all',
       productIds: [],
       categoryIds: [],
+      categoryNames: [],
       percentageOff: 10,
       bundleQuantity: 2,
       bundlePrice: 0,
@@ -169,6 +171,7 @@ export class PromotionService {
       scope: value.scope === 'category' || value.scope === 'product' ? value.scope : 'all',
       productIds: this.normalizeNumberList(value.productIds),
       categoryIds: this.normalizeNumberList(value.categoryIds),
+      categoryNames: this.normalizeStringList((value as Partial<Promotion>).categoryNames),
       percentageOff: this.toPositiveNumber(value.percentageOff),
       bundleQuantity: Math.max(2, Math.round(this.toPositiveNumber(value.bundleQuantity) || 2)),
       bundlePrice: this.toPositiveNumber(value.bundlePrice),
@@ -185,6 +188,20 @@ export class PromotionService {
       const parsed = Number(value);
       if (!Number.isFinite(parsed)) continue;
       if (!out.includes(parsed)) out.push(parsed);
+    }
+    return out;
+  }
+
+  private normalizeStringList(values: unknown): string[] {
+    if (!Array.isArray(values)) return [];
+    const out: string[] = [];
+    for (const value of values) {
+      if (typeof value !== 'string') continue;
+      const clean = value.trim();
+      if (!clean) continue;
+      if (!out.some(item => this.normalizeText(item) === this.normalizeText(clean))) {
+        out.push(clean);
+      }
     }
     return out;
   }
@@ -332,8 +349,16 @@ export class PromotionService {
     if (promotion.scope === 'product') {
       return promotion.productIds.includes(unit.sourceItem.productId);
     }
+
     const categoryId = unit.product?.categoryId;
-    return categoryId != null && promotion.categoryIds.includes(categoryId);
+    if (categoryId != null && promotion.categoryIds.includes(categoryId)) {
+      return true;
+    }
+
+    const unitCategoryName = this.normalizeText(unit.product?.category || '');
+    if (!unitCategoryName) return false;
+
+    return promotion.categoryNames.some(categoryName => this.normalizeText(categoryName) === unitCategoryName);
   }
 
   private isPromotionActive(promotion: Promotion, now: Date): boolean {
@@ -372,6 +397,14 @@ export class PromotionService {
 
   private roundCurrency(value: number): number {
     return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+
+  private normalizeText(value: string): string {
+    return (value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
   }
 
   private createPromotionId(): string {
