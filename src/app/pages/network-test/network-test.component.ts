@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -10,6 +10,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { getServerUrl } from '../../core/config/server.config';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-network-test',
@@ -30,13 +31,13 @@ import { getServerUrl } from '../../core/config/server.config';
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <span>Diagnóstico de Red</span>
+      <span>Diagnostico de Red</span>
     </mat-toolbar>
 
     <div class="test-container">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Probar Conexión al Servidor</mat-card-title>
+          <mat-card-title>Probar Conexion al Servidor</mat-card-title>
         </mat-card-header>
 
         <mat-card-content>
@@ -47,7 +48,7 @@ import { getServerUrl } from '../../core/config/server.config';
 
           <button mat-raised-button color="primary" (click)="testConnection()" [disabled]="testing">
             <mat-icon>network_check</mat-icon>
-            {{ testing ? 'Probando...' : 'Probar Conexión' }}
+            {{ testing ? 'Probando...' : 'Probar Conexion' }}
           </button>
 
           <div class="test-result" *ngIf="testResult">
@@ -76,15 +77,15 @@ import { getServerUrl } from '../../core/config/server.config';
 
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Instrucciones de Solución</mat-card-title>
+          <mat-card-title>Instrucciones de Solucion</mat-card-title>
         </mat-card-header>
 
         <mat-card-content>
           <div class="instructions">
-            <h3>Si la conexión falla:</h3>
+            <h3>Si la conexion falla:</h3>
 
             <div class="step">
-              <strong>1. Verifica que el servidor esté corriendo</strong>
+              <strong>1. Verifica que el servidor este corriendo</strong>
               <p>En la computadora, ejecuta:</p>
               <code>cd backend</code>
               <code>npm run dev</code>
@@ -99,7 +100,7 @@ import { getServerUrl } from '../../core/config/server.config';
 
             <div class="step">
               <strong>3. Misma red WiFi</strong>
-              <p>Asegúrate de que el celular/tablet y la computadora estén conectados a la misma red WiFi.</p>
+              <p>Asegurate de que el celular/tablet y la computadora esten conectados a la misma red WiFi.</p>
             </div>
 
             <div class="step">
@@ -107,10 +108,10 @@ import { getServerUrl } from '../../core/config/server.config';
               <p>Agrega una regla para permitir el puerto 3000:</p>
               <ul>
                 <li>Windows Defender Firewall</li>
-                <li>Configuración avanzada</li>
-                <li>Reglas de entrada → Nueva regla</li>
+                <li>Configuracion avanzada</li>
+                <li>Reglas de entrada -> Nueva regla</li>
                 <li>Puerto TCP 3000</li>
-                <li>Permitir conexión</li>
+                <li>Permitir conexion</li>
               </ul>
             </div>
 
@@ -118,7 +119,7 @@ import { getServerUrl } from '../../core/config/server.config';
               <strong>5. Prueba desde el navegador</strong>
               <p>Abre el navegador del celular y visita:</p>
               <code>http://[TU-IP]:3000/api/health</code>
-              <p>Deberías ver un JSON con "status": "ok"</p>
+              <p>Deberias ver un JSON con "status": "healthy"</p>
             </div>
           </div>
         </mat-card-content>
@@ -228,9 +229,12 @@ import { getServerUrl } from '../../core/config/server.config';
 export class NetworkTestComponent {
   serverUrl = getServerUrl();
   testing = false;
-  testResult: any = null;
+  testResult: { ping: boolean; api: boolean; socket: boolean; details: string } | null = null;
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private authService: AuthService
+  ) {
     const savedUrl = localStorage.getItem('serverUrl');
     if (savedUrl) {
       this.serverUrl = savedUrl;
@@ -249,7 +253,6 @@ export class NetworkTestComponent {
     };
 
     try {
-      // Test 1: Ping básico a la API
       const pingResponse = await fetch(`${this.serverUrl}/api/health`, {
         method: 'GET',
         mode: 'cors'
@@ -260,24 +263,25 @@ export class NetworkTestComponent {
       if (result.ping) {
         const data = await pingResponse.json();
         result.api = data?.ok === true || data?.status === 'ok' || data?.status === 'healthy';
-        result.details += `✅ API respondió: ${JSON.stringify(data, null, 2)}\n\n`;
+        result.details += `API respondio: ${JSON.stringify(data, null, 2)}\n\n`;
       }
     } catch (error: any) {
-      result.details += `❌ Error al conectar: ${error.message}\n\n`;
-      
-      if (error.message.includes('Failed to fetch')) {
+      result.details += `Error al conectar: ${error.message}\n\n`;
+
+      if (String(error?.message || '').includes('Failed to fetch')) {
         result.details += 'Posibles causas:\n';
-        result.details += '- El servidor no está corriendo\n';
+        result.details += '- El servidor no esta corriendo\n';
         result.details += '- Firewall bloqueando el puerto 3000\n';
         result.details += '- IP incorrecta\n';
-        result.details += '- No están en la misma red WiFi\n';
+        result.details += '- No estan en la misma red WiFi\n';
       }
     }
 
-    // Test 2: Socket.IO
     try {
       const { io } = await import('socket.io-client');
+      const token = this.authService.token;
       const socket = io(this.serverUrl, {
+        auth: token ? { token } : undefined,
         transports: ['websocket', 'polling'],
         timeout: 5000
       });
@@ -285,25 +289,35 @@ export class NetworkTestComponent {
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           socket.disconnect();
-          reject(new Error('Timeout esperando conexión Socket.IO'));
+          reject(new Error('Timeout esperando conexion Socket.IO'));
         }, 5000);
 
         socket.on('connect', () => {
           clearTimeout(timeout);
           result.socket = true;
-          result.details += '✅ Socket.IO conectado exitosamente\n';
+          result.details += 'Socket.IO conectado exitosamente\n';
           socket.disconnect();
           resolve(true);
         });
 
         socket.on('connect_error', (error) => {
           clearTimeout(timeout);
-          result.details += `❌ Error Socket.IO: ${error.message}\n`;
+          const message = String(error?.message || 'Error desconocido');
+
+          if (message === 'Unauthorized' || message === 'Invalid token') {
+            result.socket = true;
+            result.details += `Socket.IO respondio, pero rechazo la autenticacion: ${message}\n`;
+            socket.disconnect();
+            resolve(true);
+            return;
+          }
+
+          result.details += `Error Socket.IO: ${message}\n`;
           reject(error);
         });
       });
     } catch (error: any) {
-      result.details += `❌ Socket.IO falló: ${error.message}\n`;
+      result.details += `Socket.IO fallo: ${error.message}\n`;
     }
 
     this.testResult = result;
