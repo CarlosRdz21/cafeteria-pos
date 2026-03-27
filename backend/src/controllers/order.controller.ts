@@ -8,6 +8,16 @@ import { CashRegistersController } from './cash-registers.controller';
 
 
 export class OrderController {
+  private static getPendingItemMergeKey(item: {
+    productId: number;
+    name: string;
+    price: number;
+  }): string {
+    const productId = Number(item.productId || 0);
+    const name = String(item.name || '').trim();
+    const price = Number(item.price || 0).toFixed(2);
+    return `${productId}::${name}::${price}`;
+  }
 
   static async create(req: Request, res: Response) {
     try {
@@ -189,10 +199,10 @@ export class OrderController {
             return res.status(404).json({ error: 'Orden no encontrada' });
           }
 
-          const mergedItemsMap = new Map<number, any>();
+          const mergedItemsMap = new Map<string, any>();
 
           for (const item of pendingOrder.items) {
-            mergedItemsMap.set(item.productId, {
+            mergedItemsMap.set(this.getPendingItemMergeKey(item), {
               productId: item.productId,
               name: item.name,
               quantity: item.quantity,
@@ -202,12 +212,13 @@ export class OrderController {
           }
 
           for (const item of items) {
-            const existing = mergedItemsMap.get(item.productId);
+            const mergeKey = this.getPendingItemMergeKey(item);
+            const existing = mergedItemsMap.get(mergeKey);
             if (existing) {
               existing.quantity += item.quantity;
               existing.subtotal = existing.price * existing.quantity;
             } else {
-              mergedItemsMap.set(item.productId, {
+              mergedItemsMap.set(mergeKey, {
                 productId: item.productId,
                 name: item.name,
                 quantity: item.quantity,
