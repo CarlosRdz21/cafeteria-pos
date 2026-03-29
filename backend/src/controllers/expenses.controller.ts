@@ -58,22 +58,9 @@ export class ExpensesController {
         }
       });
 
-      if (created.cashRegisterId) {
-        const register = await db.cashRegister.findUnique({ where: { id: created.cashRegisterId } });
-        if (register) {
-          await db.cashRegister.update({
-            where: { id: register.id },
-            data: {
-              expenses: toNumber(register.expenses, 0) + created.amount
-            }
-          });
-        }
-      }
-
       res.status(201).json(created);
     } catch (error: any) {
       res.status(500).json({ error: error?.message || 'Error creating expense' });
     }
   }
 }
-

@@ -16,7 +16,6 @@ import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Expense } from '../../core/models/domain.models';
 import { AuthService, User } from '../../core/services/auth.service';
-import { CashRegisterService } from '../../core/services/cash-register.service';
 import { UiDialogService } from '../../core/services/ui-dialog.service';
 import { ExpenseService } from '../../core/services/expense.service';
 import { endOfDay, format, startOfDay } from 'date-fns';
@@ -417,7 +416,6 @@ export class ExpensesComponent implements OnInit {
   constructor(
     private expenseService: ExpenseService,
     private authService: AuthService,
-    private cashRegisterService: CashRegisterService,
     private router: Router,
     private uiDialog: UiDialogService,
     private snackBar: MatSnackBar
@@ -480,8 +478,6 @@ export class ExpensesComponent implements OnInit {
       return;
     }
 
-    const register = this.cashRegisterService.getCurrentRegister();
-
     const expense: Expense = {
       concept: this.newExpense.concept.trim(),
       description: this.newExpense.concept.trim(),
@@ -490,8 +486,7 @@ export class ExpensesComponent implements OnInit {
       timestamp: this.newExpenseDate || new Date(),
       notes: this.newExpense.notes?.trim() || '',
       userId: this.currentUser?.id,
-      userName: this.currentUser?.name,
-      cashRegisterId: register?.id
+      userName: this.currentUser?.name
     };
 
     try {
