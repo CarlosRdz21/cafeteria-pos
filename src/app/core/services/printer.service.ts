@@ -580,7 +580,8 @@ export class PrinterService {
     }
 
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
-    commands.push(this.textToBytes(this.formatLine('Subtotal', `$${order.subtotal.toFixed(2)}`, lineWidth)));
+    commands.push(this.textToBytes(this.formatLine('Subtotal', `$${this.getPrintableSubtotal(order).toFixed(2)}`, lineWidth)));
+    this.appendPromotionSummary(commands, order, lineWidth);
     commands.push(new Uint8Array([ESC, 0x21, 0x20]));
     commands.push(this.textToBytes(this.formatLine('Total', `$${order.total.toFixed(2)}`, lineWidth)));
     commands.push(new Uint8Array([ESC, 0x21, 0x00]));
@@ -705,7 +706,8 @@ export class PrinterService {
     }
 
     commands.push(this.textToBytes(this.dividerLine(lineWidth)));
-    commands.push(this.textToBytes(this.formatLine('Subtotal', `$${order.subtotal.toFixed(2)}`, lineWidth)));
+    commands.push(this.textToBytes(this.formatLine('Subtotal', `$${this.getPrintableSubtotal(order).toFixed(2)}`, lineWidth)));
+    this.appendPromotionSummary(commands, order, lineWidth);
     commands.push(new Uint8Array([ESC, 0x21, 0x20]));
     commands.push(this.textToBytes(this.formatLine('Total', `$${order.total.toFixed(2)}`, lineWidth)));
     commands.push(new Uint8Array([ESC, 0x21, 0x00]));
@@ -851,6 +853,37 @@ export class PrinterService {
     const cleanValue = value.length > width ? value.slice(0, width) : value;
     const spaceCount = Math.max(1, width - cleanLabel.length - cleanValue.length);
     return `${cleanLabel}${' '.repeat(spaceCount)}${cleanValue}\n`;
+  }
+
+  private getPrintableSubtotal(order: Order): number {
+    const discountTotal = Number(order.discountTotal || 0);
+    if (discountTotal > 0) {
+      return Number(order.total || 0) + discountTotal;
+    }
+    return Number(order.subtotal || 0);
+  }
+
+  private appendPromotionSummary(commands: Uint8Array[], order: Order, lineWidth: number): void {
+    const promotions = Array.isArray(order.appliedPromotions) ? order.appliedPromotions : [];
+    for (const promotion of promotions) {
+      const name = typeof promotion?.promotionName === 'string'
+        ? promotion.promotionName.trim()
+        : '';
+      const discount = Number(promotion?.discountTotal || 0);
+      if (!name || discount <= 0) {
+        continue;
+      }
+
+      for (const line of this.wrapText(`Promo: ${name}`, lineWidth)) {
+        commands.push(this.textToBytes(`${line}\n`));
+      }
+      commands.push(this.textToBytes(this.formatLine('', `-$${discount.toFixed(2)}`, lineWidth)));
+    }
+
+    const discountTotal = Number(order.discountTotal || 0);
+    if (discountTotal > 0) {
+      commands.push(this.textToBytes(this.formatLine('Descuento', `-$${discountTotal.toFixed(2)}`, lineWidth)));
+    }
   }
 
   private appendWrappedReceiptItem(commands: Uint8Array[], item: OrderItem, lineWidth: number) {

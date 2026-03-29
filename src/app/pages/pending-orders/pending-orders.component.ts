@@ -1,4 +1,5 @@
 import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -8,14 +9,16 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { PendingOrdersService } from '../../core/services/pending-orders.service';
-import { Order, OrderItem } from '../../core/models/domain.models';
+import { Order, OrderItem, Product } from '../../core/models/domain.models';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { SocketService } from '../../core/services/socket.service';
 import { PrinterService } from '../../core/services/printer.service';
 import { UiDialogService } from '../../core/services/ui-dialog.service';
+import { PromotionService } from '../../core/services/promotion.service';
+import { buildApiUrl } from '../../core/config/server.config';
 
 @Component({
   selector: 'app-pending-orders',
@@ -285,6 +288,7 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
   private sub = new Subscription();
   private audioContext?: AudioContext;
   private pressTimer: ReturnType<typeof setTimeout> | null = null;
+  private products: Product[] = [];
 
   constructor(
     private pendingOrdersService: PendingOrdersService,
@@ -293,10 +297,17 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
     private router: Router,
     private snackBar: MatSnackBar,
     private socketService: SocketService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private promotionService: PromotionService,
+    private http: HttpClient
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
+    await Promise.allSettled([
+      this.loadProducts(),
+      this.promotionService.ensureLoaded()
+    ]);
+
     this.loadOrders();
 
     this.sub.add(
@@ -359,7 +370,29 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
   }
 
   async printAccount(order: Order) {
-    const printed = await this.printerService.printPendingAccount(order);
+    let printableOrder = order;
+
+    try {
+      await this.ensureProductsLoaded();
+      await this.promotionService.ensureLoaded();
+
+      if (this.products.length) {
+        const pricing = this.promotionService.evaluateOrder(order.items, this.products);
+        printableOrder = {
+          ...order,
+          items: pricing.pricedItems,
+          subtotal: pricing.subtotal,
+          tax: pricing.tax,
+          total: pricing.total,
+          discountTotal: pricing.discountTotal,
+          appliedPromotions: pricing.appliedPromotions
+        };
+      }
+    } catch (error) {
+      console.error('No se pudieron recalcular promociones para la cuenta previa:', error);
+    }
+
+    const printed = await this.printerService.printPendingAccount(printableOrder);
     if (printed) {
       this.snackBar.open(`Cuenta de orden #${order.id} enviada a impresión`, 'Cerrar', {
         duration: 2500
@@ -503,6 +536,32 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
       oscillator.start(startAt + note.offset);
       oscillator.stop(startAt + note.offset + note.duration);
     }
+  }
+
+  private async ensureProductsLoaded(): Promise<void> {
+    if (this.products.length) {
+      return;
+    }
+
+    await this.loadProducts();
+  }
+
+  private async loadProducts(): Promise<void> {
+    const rows = await firstValueFrom(this.http.get<any[]>(buildApiUrl('products')));
+    this.products = Array.isArray(rows) ? rows.map(row => this.mapApiProduct(row)) : [];
+  }
+
+  private mapApiProduct(row: any): Product {
+    return {
+      id: Number.isFinite(Number(row?.id)) ? Number(row.id) : undefined,
+      name: typeof row?.name === 'string' ? row.name : '',
+      description: typeof row?.description === 'string' ? row.description : '',
+      price: Number.isFinite(Number(row?.price)) ? Number(row.price) : 0,
+      image: typeof row?.image === 'string' ? row.image : '',
+      category: typeof row?.categoryName === 'string' ? row.categoryName : '',
+      categoryId: Number.isFinite(Number(row?.categoryId)) ? Number(row.categoryId) : undefined,
+      available: row?.available !== false
+    };
   }
 }
 
