@@ -92,7 +92,7 @@ import { buildApiUrl } from '../../core/config/server.config';
             <mat-icon>swap_vert</mat-icon>
             <span>Movimientos de Insumos</span>
           </button>
-          <button mat-menu-item (click)="goToExpenses()" *ngIf="isAdmin()">
+          <button mat-menu-item (click)="goToExpenses()" *ngIf="isAdminOrBarista()">
             <mat-icon>receipt</mat-icon>
             <span>Gastos</span>
           </button>

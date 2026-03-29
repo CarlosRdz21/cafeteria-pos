@@ -142,7 +142,7 @@ export const routes: Routes = [
   {
     path: 'expenses',
     loadComponent: () => import('./pages/expenses/expenses.component').then(m => m.ExpensesComponent),
-    canActivate: [authGuard, adminGuard]
+    canActivate: [authGuard, adminOrBaristaGuard]
   },
   {
     path: 'admin/products',
