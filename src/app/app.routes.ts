@@ -142,7 +142,7 @@ export const routes: Routes = [
   {
     path: 'expenses',
     loadComponent: () => import('./pages/expenses/expenses.component').then(m => m.ExpensesComponent),
-    canActivate: [authGuard, adminOrBaristaGuard, cashRegisterGuard]
+    canActivate: [authGuard, adminGuard]
   },
   {
     path: 'admin/products',
@@ -167,7 +167,7 @@ export const routes: Routes = [
   {
     path: 'admin/printer',
     loadComponent: () => import('./pages/admin/printer-settings/printer-settings.component').then(m => m.PrinterSettingsComponent),
-    canActivate: [authGuard, adminGuard]
+    canActivate: [authGuard, adminOrBaristaGuard]
   },
   {
     path: 'inventory-movements',

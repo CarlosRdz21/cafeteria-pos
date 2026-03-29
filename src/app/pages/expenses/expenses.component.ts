@@ -382,9 +382,14 @@ export class ExpensesComponent implements OnInit {
 
   categories: string[] = [
     'Insumos',
+    'Nómina',
+    'Renta',
+    'Servicios',
+    'Mobiliario',
+    'Nuevos productos',
+    'Equipamiento',
     'Limpieza',
     'Mantenimiento',
-    'Servicios',
     'Transporte',
     'Otros'
   ];
@@ -476,10 +481,6 @@ export class ExpensesComponent implements OnInit {
     }
 
     const register = this.cashRegisterService.getCurrentRegister();
-    if (!register?.id) {
-      this.snackBar.open('No hay caja abierta para registrar gastos', 'Cerrar', { duration: 3000 });
-      return;
-    }
 
     const expense: Expense = {
       concept: this.newExpense.concept.trim(),
@@ -490,7 +491,7 @@ export class ExpensesComponent implements OnInit {
       notes: this.newExpense.notes?.trim() || '',
       userId: this.currentUser?.id,
       userName: this.currentUser?.name,
-      cashRegisterId: register.id
+      cashRegisterId: register?.id
     };
 
     try {
@@ -529,4 +530,3 @@ export class ExpensesComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 }
-

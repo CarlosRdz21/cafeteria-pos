@@ -76,6 +76,13 @@ interface PromotionReportItem {
   salesTotal: number;
 }
 
+interface FinancialSummary {
+  grossSales: number;
+  totalExpenses: number;
+  netProfit: number;
+  profitMargin: number;
+}
+
 
 @Component({
   selector: 'app-reports',
@@ -201,7 +208,49 @@ interface PromotionReportItem {
                   <span class="kpi-value">\${{promotionStats.promotionalDiscountTotal.toFixed(2)}}</span>
                 </div>
               </mat-card>
+
+              <mat-card class="kpi-card total-expenses">
+                <mat-icon>receipt_long</mat-icon>
+                <div class="kpi-content">
+                  <span class="kpi-label">Total Gastos</span>
+                  <span class="kpi-value">\${{financialSummary.totalExpenses.toFixed(2)}}</span>
+                </div>
+              </mat-card>
+
+              <mat-card class="kpi-card net-profit">
+                <mat-icon>trending_up</mat-icon>
+                <div class="kpi-content">
+                  <span class="kpi-label">Ganancia Neta</span>
+                  <span class="kpi-value">\${{financialSummary.netProfit.toFixed(2)}}</span>
+                </div>
+              </mat-card>
             </div>
+
+            <mat-card class="chart-card">
+              <mat-card-header>
+                <mat-card-title>Resumen Financiero del Período</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="finance-summary-grid">
+                  <div class="finance-summary-item income">
+                    <span class="mini-caption">Ventas finales</span>
+                    <strong>\${{financialSummary.grossSales.toFixed(2)}}</strong>
+                  </div>
+                  <div class="finance-summary-item expenses">
+                    <span class="mini-caption">Gastos registrados</span>
+                    <strong>\${{financialSummary.totalExpenses.toFixed(2)}}</strong>
+                  </div>
+                  <div class="finance-summary-item profit" [class.negative]="financialSummary.netProfit < 0">
+                    <span class="mini-caption">Ganancia neta</span>
+                    <strong>\${{financialSummary.netProfit.toFixed(2)}}</strong>
+                  </div>
+                  <div class="finance-summary-item margin" [class.negative]="financialSummary.profitMargin < 0">
+                    <span class="mini-caption">Margen</span>
+                    <strong>{{financialSummary.profitMargin.toFixed(1)}}%</strong>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
 
             <!-- Gráfico de métodos de pago -->
             <mat-card class="chart-card">
@@ -664,6 +713,8 @@ interface PromotionReportItem {
     .kpi-card.card-sales mat-icon { color: #00bcd4; }
     .kpi-card.promotion-sales mat-icon { color: #fb8c00; }
     .kpi-card.promotion-discount mat-icon { color: #8e24aa; }
+    .kpi-card.total-expenses mat-icon { color: #f44336; }
+    .kpi-card.net-profit mat-icon { color: #2e7d32; }
 
     .kpi-content {
       display: flex;
@@ -715,6 +766,42 @@ interface PromotionReportItem {
       display: flex;
       flex-direction: column;
       gap: 10px;
+    }
+
+    .finance-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .finance-summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #fafafa;
+    }
+
+    .finance-summary-item strong {
+      font-size: 22px;
+    }
+
+    .finance-summary-item.income strong {
+      color: #1565c0;
+    }
+
+    .finance-summary-item.expenses strong {
+      color: #c62828;
+    }
+
+    .finance-summary-item.profit strong,
+    .finance-summary-item.margin strong {
+      color: #2e7d32;
+    }
+
+    .finance-summary-item.negative strong {
+      color: #c62828;
     }
 
     .promotion-breakdown-row {
@@ -1421,6 +1508,12 @@ export class ReportsComponent implements OnInit {
     promotionalOrders: 0
   };
   promotionBreakdown: PromotionReportItem[] = [];
+  financialSummary: FinancialSummary = {
+    grossSales: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    profitMargin: 0
+  };
 
   displayedColumns: string[] = ['rank', 'product', 'quantity', 'total'];
   expenseColumns: string[] = ['date', 'concept', 'category', 'user', 'amount', 'notes'];
@@ -1517,6 +1610,7 @@ export class ReportsComponent implements OnInit {
     this.buildPromotionReport(this.recentOrders);
     this.calculateProductStats();
     await this.loadExpenses();
+    this.calculateFinancialSummary();
   }
 
 
@@ -1644,6 +1738,20 @@ export class ReportsComponent implements OnInit {
 
     this.expenseTotal = this.expenses.reduce((sum, e) => sum + e.amount, 0);
     this.calculateExpenseCategoryTotals();
+  }
+
+  calculateFinancialSummary() {
+    const grossSales = Number(this.stats.totalSales || 0);
+    const totalExpenses = Number(this.expenseTotal || 0);
+    const netProfit = grossSales - totalExpenses;
+    const profitMargin = grossSales > 0 ? (netProfit / grossSales) * 100 : 0;
+
+    this.financialSummary = {
+      grossSales,
+      totalExpenses,
+      netProfit,
+      profitMargin
+    };
   }
 
   calculateExpenseCategoryTotals() {

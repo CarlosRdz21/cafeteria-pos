@@ -51,10 +51,15 @@ import { buildApiUrl } from '../../core/config/server.config';
         <mat-toolbar color="primary" class="toolbar">
           <img class="toolbar-logo" src="assets/images/Logo-Cafeteria.png" alt="Logo Dulce Aroma Cafe" />
           <span class="toolbar-title">Dulce Aroma Café</span>
-          <span class="toolbar-subtitle" *ngIf="addToOrderId">
+        <span class="toolbar-subtitle" *ngIf="addToOrderId">
             (Agregando a Orden #{{addToOrderId}})
         </span>
         <span class="spacer"></span>
+
+        <button mat-stroked-button type="button" class="cancel-add-btn" *ngIf="addToOrderId" (click)="cancelAddToPendingOrder()">
+          <mat-icon>close</mat-icon>
+          Cancelar
+        </button>
         
         <!-- Indicador de conexión -->
         <button mat-icon-button *ngIf="isAdmin()" [matTooltip]="isConnected ? 'Conectado al servidor' : 'Desconectado'" (click)="goToSettings()">
@@ -87,7 +92,7 @@ import { buildApiUrl } from '../../core/config/server.config';
             <mat-icon>swap_vert</mat-icon>
             <span>Movimientos de Insumos</span>
           </button>
-          <button mat-menu-item (click)="goToExpenses()" *ngIf="isAdminOrBarista()">
+          <button mat-menu-item (click)="goToExpenses()" *ngIf="isAdmin()">
             <mat-icon>receipt</mat-icon>
             <span>Gastos</span>
           </button>
@@ -103,7 +108,7 @@ import { buildApiUrl } from '../../core/config/server.config';
             <mat-icon>manage_accounts</mat-icon>
             <span>Administrar Usuarios</span>
           </button>
-          <button mat-menu-item (click)="goToPrinterSettings()" *ngIf="isAdmin()">
+          <button mat-menu-item (click)="goToPrinterSettings()" *ngIf="isAdminOrBarista()">
             <mat-icon>print</mat-icon>
             <span>Configurar Impresora</span>
           </button>
@@ -226,7 +231,18 @@ import { buildApiUrl } from '../../core/config/server.config';
                 <mat-icon>{{ addToOrderId ? 'add_circle' : 'bookmark' }}</mat-icon>
                 {{ addToOrderId ? 'Agregar a Orden #' + addToOrderId : 'Guardar Comanda' }}
               </button>
-              
+
+              <button
+                mat-stroked-button
+                type="button"
+                class="cancel-pending-btn"
+                *ngIf="addToOrderId"
+                (click)="cancelAddToPendingOrder()"
+              >
+                <mat-icon>undo</mat-icon>
+                Cancelar
+              </button>
+               
               <!-- Solo admin y barista pueden cobrar directamente -->
               <div class="payment-buttons" *ngIf="isAdminOrBarista()">
                 <button mat-raised-button color="primary" 
@@ -295,6 +311,12 @@ import { buildApiUrl } from '../../core/config/server.config';
 
     .toolbar mat-icon.disconnected {
       color: #f44336;
+    }
+
+    .cancel-add-btn {
+      margin-right: 8px;
+      border-color: rgba(255, 255, 255, 0.45);
+      color: white;
     }
 
     .spacer {
@@ -550,6 +572,10 @@ import { buildApiUrl } from '../../core/config/server.config';
       color: white;
     }
 
+    .cancel-pending-btn {
+      height: 48px;
+    }
+
     .payment-buttons {
       display: flex;
       gap: 12px;
@@ -596,7 +622,7 @@ import { buildApiUrl } from '../../core/config/server.config';
 
       .products-panel {
         flex: 1 1 auto;
-        padding: 12px 12px 104px;
+        padding: 12px 12px calc(104px + var(--app-safe-bottom));
         overflow: visible;
       }
 
@@ -607,7 +633,7 @@ import { buildApiUrl } from '../../core/config/server.config';
         border-top: 1px solid #e0e0e0;
         max-height: min(68dvh, 560px);
         position: sticky;
-        bottom: 0;
+        bottom: var(--app-safe-bottom);
         z-index: 40;
         border-radius: 20px 20px 0 0;
         box-shadow: 0 -8px 24px rgba(0,0,0,0.12);
@@ -703,6 +729,11 @@ import { buildApiUrl } from '../../core/config/server.config';
 
       .toolbar-subtitle {
         display: none;
+      }
+
+      .cancel-add-btn {
+        min-width: 0;
+        padding: 0 10px;
       }
     }
   `]
@@ -1211,7 +1242,41 @@ export class PosComponent implements OnInit, OnDestroy {
     }
   }
 
+  async cancelAddToPendingOrder() {
+    if (!this.addToOrderId) {
+      return;
+    }
+
+    const hasItems = this.currentOrder.length > 0;
+    const confirmed = await this.uiDialog.confirm({
+      title: 'Cancelar agregado',
+      message: hasItems
+        ? '¿Deseas cancelar el agregado de productos a esta comanda? Se descartarán los productos nuevos.'
+        : '¿Deseas regresar a las comandas pendientes?',
+      confirmText: 'Sí, cancelar'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.orderService.clearOrder();
+    this.addToOrderId = undefined;
+    this.router.navigate(['/pending-orders']);
+  }
+
   private async printKitchenTicketAfterSave(order: Order): Promise<void> {
+    const shouldPrint = await this.uiDialog.confirm({
+      title: 'Imprimir ticket de proceso',
+      message: '¿Deseas imprimir el ticket para proceso de esta comanda?',
+      confirmText: 'Sí, imprimir',
+      cancelText: 'No'
+    });
+
+    if (!shouldPrint) {
+      return;
+    }
+
     const printed = await this.printerService.printKitchenTicket(order);
     if (!printed) {
       this.snackBar.open('Comanda guardada, pero no se pudo imprimir el ticket de proceso', 'Cerrar', {
@@ -1259,6 +1324,7 @@ export class PosComponent implements OnInit, OnDestroy {
     const dialogRef = this.dialog.open(DrinkOptionsDialogComponent, {
       width: '920px',
       maxWidth: '90vw',
+      maxHeight: '92vh',
       data: {
         product,
         categoryName,
@@ -1272,7 +1338,13 @@ export class PosComponent implements OnInit, OnDestroy {
 
   private requiresHotColdSelection(category: string): boolean {
     const normalizedCategory = this.normalizeText(category);
-    return normalizedCategory === 'con cafe' || normalizedCategory === 'sin cafeina';
+    return [
+      'con cafe',
+      'sin cafe',
+      'sin cafeina',
+      'tisanas y te',
+      'bebidas dulce aroma'
+    ].includes(normalizedCategory);
   }
 
   private normalizeText(value: string): string {
@@ -1585,6 +1657,14 @@ type DrinkOptionsDialogData = {
         min-width: 0;
       }
 
+      mat-dialog-content {
+        max-height: calc(100dvh - 220px) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 4px;
+      }
+
       .option-grid.cols-3 {
         grid-template-columns: 1fr;
       }
@@ -1639,7 +1719,13 @@ export class DrinkOptionsDialogComponent {
     this.isFoodProduct = this.normalizeDrinkBaseType(data.product.drinkBaseType) === 'food';
     this.isEspresso = normalizedName.includes('espresso') || normalizedName.includes('expresso');
     this.isFlatWhite = normalizedName.includes('flat white');
-    this.requiresHotCold = normalizedCategory === 'con cafe' || normalizedCategory === 'sin cafeina';
+    this.requiresHotCold = [
+      'con cafe',
+      'sin cafe',
+      'sin cafeina',
+      'tisanas y te',
+      'bebidas dulce aroma'
+    ].includes(normalizedCategory);
     this.serviceTemperature = this.normalizeServiceTemperature(data.serviceTemperature);
     this.isColdOnly = this.serviceTemperature === 'cold-only';
     this.drinkBaseType = this.normalizeDrinkBaseType(data.product.drinkBaseType);
