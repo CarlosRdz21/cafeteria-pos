@@ -202,7 +202,7 @@ export class OrderController {
           const mergedItemsMap = new Map<string, any>();
 
           for (const item of pendingOrder.items) {
-            mergedItemsMap.set(this.getPendingItemMergeKey(item), {
+            mergedItemsMap.set(OrderController.getPendingItemMergeKey(item), {
               productId: item.productId,
               name: item.name,
               quantity: item.quantity,
@@ -212,7 +212,7 @@ export class OrderController {
           }
 
           for (const item of items) {
-            const mergeKey = this.getPendingItemMergeKey(item);
+            const mergeKey = OrderController.getPendingItemMergeKey(item);
             const existing = mergedItemsMap.get(mergeKey);
             if (existing) {
               existing.quantity += item.quantity;
