@@ -97,6 +97,7 @@ export interface Expense {
   userName?: string;
   notes?: string;
   cashRegisterId?: number;
+  paidFromCashRegister?: boolean;
 }
 
 export interface Supply {

@@ -170,6 +170,7 @@ model Expense {
   userName       String?
   notes          String?
   cashRegisterId Int?
+  paidFromCashRegister Boolean @default(false)
 
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   cashRegister CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: SetNull, onUpdate: Cascade)

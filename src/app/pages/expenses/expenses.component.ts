@@ -14,10 +14,12 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Expense } from '../../core/models/domain.models';
 import { AuthService, User } from '../../core/services/auth.service';
 import { UiDialogService } from '../../core/services/ui-dialog.service';
 import { ExpenseService } from '../../core/services/expense.service';
+import { CashRegisterService } from '../../core/services/cash-register.service';
 import { endOfDay, format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -43,7 +45,8 @@ interface CategoryTotal {
     MatNativeDateModule,
     MatDialogModule,
     MatTableModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatSlideToggleModule
   ],
   template: `
     <mat-toolbar color="primary">
@@ -103,6 +106,15 @@ interface CategoryTotal {
               <mat-label>Notas</mat-label>
               <textarea matInput rows="2" [(ngModel)]="newExpense.notes"></textarea>
             </mat-form-field>
+
+            <div class="full-width cash-toggle-row">
+              <mat-slide-toggle [(ngModel)]="newExpense.paidFromCashRegister">
+                Este gasto salió directamente de la caja
+              </mat-slide-toggle>
+              <p class="cash-toggle-hint">
+                Si lo activas, el gasto se descontará del efectivo esperado al cierre de caja.
+              </p>
+            </div>
           </div>
         </mat-card-content>
         <mat-card-actions>
@@ -199,6 +211,13 @@ interface CategoryTotal {
                 <td mat-cell *matCellDef="let element" class="amount">\${{element.amount.toFixed(2)}}</td>
               </ng-container>
 
+              <ng-container matColumnDef="cashSource">
+                <th mat-header-cell *matHeaderCellDef>Caja</th>
+                <td mat-cell *matCellDef="let element">
+                  {{element.paidFromCashRegister ? 'Sí' : 'No'}}
+                </td>
+              </ng-container>
+
               <ng-container matColumnDef="notes">
                 <th mat-header-cell *matHeaderCellDef>Notas</th>
                 <td mat-cell *matCellDef="let element">{{element.notes || '-'}}</td>
@@ -255,6 +274,19 @@ interface CategoryTotal {
 
     .full-width {
       grid-column: 1 / -1;
+    }
+
+    .cash-toggle-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 4px;
+    }
+
+    .cash-toggle-hint {
+      margin: 0;
+      font-size: 13px;
+      color: rgba(0,0,0,0.6);
     }
 
     mat-card-actions {
@@ -402,19 +434,21 @@ export class ExpensesComponent implements OnInit {
 
   currentUser: User | null = null;
 
-  newExpense: Expense = {
-    concept: '',
-    amount: 0,
-    category: 'Insumos',
-    timestamp: new Date(),
-    notes: ''
-  };
+    newExpense: Expense = {
+      concept: '',
+      amount: 0,
+      category: 'Insumos',
+      timestamp: new Date(),
+      notes: '',
+      paidFromCashRegister: false
+    };
   newExpenseDate: Date = new Date();
 
-  displayedColumns: string[] = ['date', 'concept', 'category', 'user', 'amount', 'notes'];
+  displayedColumns: string[] = ['date', 'concept', 'category', 'user', 'amount', 'cashSource', 'notes'];
 
   constructor(
     private expenseService: ExpenseService,
+    private cashRegisterService: CashRegisterService,
     private authService: AuthService,
     private router: Router,
     private uiDialog: UiDialogService,
@@ -485,15 +519,31 @@ export class ExpensesComponent implements OnInit {
       category: this.newExpense.category,
       timestamp: this.newExpenseDate || new Date(),
       notes: this.newExpense.notes?.trim() || '',
+      paidFromCashRegister: this.newExpense.paidFromCashRegister === true,
       userId: this.currentUser?.id,
       userName: this.currentUser?.name
     };
 
     try {
+      if (expense.paidFromCashRegister && !this.cashRegisterService.isRegisterOpen()) {
+        this.snackBar.open('No hay caja abierta para descontar este gasto', 'Cerrar', { duration: 3000 });
+        return;
+      }
+
+      if (expense.paidFromCashRegister) {
+        const currentRegister = this.cashRegisterService.getCurrentRegister();
+        if (currentRegister?.id) {
+          expense.cashRegisterId = currentRegister.id;
+        }
+      }
+
       await this.expenseService.create(expense);
       this.snackBar.open('Gasto registrado', 'Cerrar', { duration: 2000 });
       this.resetForm();
       await this.loadExpenses();
+      if (expense.paidFromCashRegister) {
+        await this.cashRegisterService.refreshCurrentRegister();
+      }
     } catch (error) {
       console.error('Error al guardar gasto:', error);
       this.snackBar.open('Error al guardar gasto', 'Cerrar', { duration: 3000 });
@@ -506,7 +556,8 @@ export class ExpensesComponent implements OnInit {
       amount: 0,
       category: 'Insumos',
       timestamp: new Date(),
-      notes: ''
+      notes: '',
+      paidFromCashRegister: false
     };
     this.newExpenseDate = new Date();
   }
