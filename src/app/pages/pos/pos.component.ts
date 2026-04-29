@@ -133,6 +133,15 @@ import { buildApiUrl } from '../../core/config/server.config';
             </mat-chip-listbox>
           </div>
 
+          <div class="search-box">
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="filterProducts()"
+              placeholder="Buscar producto..."
+            />
+          </div>
+
           <!-- Grid de productos -->
           <div class="products-grid">
             <mat-card 
@@ -342,6 +351,26 @@ import { buildApiUrl } from '../../core/config/server.config';
 
     .category-filters {
       margin-bottom: 16px;
+    }
+
+    .search-box {
+      margin-bottom: 16px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid #d0d7e2;
+      border-radius: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+      outline: none;
+      background: white;
+    }
+
+    .search-box input:focus {
+      border-color: #3f51b5;
+      box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.12);
     }
 
     .products-grid {
@@ -754,6 +783,7 @@ export class PosComponent implements OnInit, OnDestroy {
     espressoCortadoExtra: 0
   };
   selectedCategory = 'all';
+  searchTerm = '';
   currentOrder: OrderItem[] = [];
   totals = { subtotal: 0, tax: 0, total: 0 };
   addToOrderId?: number; // ID de orden pendiente si estamos agregando items
@@ -921,13 +951,23 @@ export class PosComponent implements OnInit, OnDestroy {
     }
   }
   filterProducts() {
-    if (this.selectedCategory === 'all') {
-      this.filteredProducts = this.products;
-    } else {
-      this.filteredProducts = this.products.filter(
-        p => this.normalizeMenuCategory(this.getProductCategoryName(p)) === this.selectedCategory
-      );
-    }
+    const search = this.searchTerm.trim().toLowerCase();
+
+    this.filteredProducts = this.products.filter(product => {
+      const matchesCategory = this.selectedCategory === 'all'
+        || this.normalizeMenuCategory(this.getProductCategoryName(product)) === this.selectedCategory;
+
+      if (!matchesCategory) {
+        return false;
+      }
+
+      if (!search) {
+        return true;
+      }
+
+      return product.name.toLowerCase().includes(search)
+        || (product.description || '').toLowerCase().includes(search);
+    });
   }
 
   private normalizeMenuCategory(category: string): string {
@@ -1120,20 +1160,34 @@ export class PosComponent implements OnInit, OnDestroy {
       }
     } else {
       // Crear nueva comanda
-      const tableNumber = await this.uiDialog.prompt({
-      title: 'Guardar comanda',
-      message: 'Número de mesa (opcional)',
-      label: 'Mesa',
-      inputType: 'number',
-      placeholder: 'Solo números',
-      confirmText: 'Continuar'
-    });
-      const customerName = await this.uiDialog.prompt({
-      title: 'Guardar comanda',
-      message: 'Nombre del cliente (opcional)',
-      label: 'Cliente',
-      confirmText: 'Guardar comanda'
-    });
+      const tablePrompt = await this.uiDialog.promptWithResult({
+        title: 'Guardar comanda',
+        message: 'Número de mesa (opcional)',
+        label: 'Mesa',
+        inputType: 'number',
+        placeholder: 'Solo números',
+        confirmText: 'Continuar'
+      });
+
+      if (!tablePrompt.confirmed) {
+        return;
+      }
+
+      const customerPrompt = await this.uiDialog.promptWithResult({
+        title: 'Guardar comanda',
+        message: 'Nombre del cliente (opcional)',
+        label: 'Cliente',
+        confirmText: 'Guardar comanda',
+        extraActionText: 'Para llevar',
+        extraActionValue: 'Para llevar'
+      });
+
+      if (!customerPrompt.confirmed) {
+        return;
+      }
+
+      const tableNumber = customerPrompt.action === 'extra' ? '' : (tablePrompt.value ?? '');
+      const customerName = customerPrompt.value ?? '';
       
       try {
         const payload = {
@@ -1291,7 +1345,7 @@ export class PosComponent implements OnInit, OnDestroy {
     const isFoodProduct = this.normalizeDrinkBaseType(product.drinkBaseType) === 'food';
     const hasBaseSelection = this.hasDrinkBaseSelection(product);
     const hasFlavorSelection = this.hasFlavorSelection(product);
-    const hasFoodCustomization = this.hasFoodCustomization(product);
+    const hasIngredientCustomization = this.hasIngredientCustomization(product);
     const serviceTemperature = this.normalizeServiceTemperature(product.serviceTemperature);
     const isColdOnly = serviceTemperature === 'cold-only';
     const needsHotCold = this.requiresHotColdSelection(categoryName);
@@ -1300,13 +1354,13 @@ export class PosComponent implements OnInit, OnDestroy {
     const hasSpecialNameOptions = isFlatWhite || isEspresso;
 
     const needsDialog =
-      hasFoodCustomization ||
+      hasIngredientCustomization ||
       hasSpecialNameOptions ||
       needsHotCold ||
       hasBaseSelection ||
       hasFlavorSelection;
 
-    if (!isFoodProduct && isColdOnly && needsHotCold && !hasSpecialNameOptions && !hasBaseSelection) {
+    if (!isFoodProduct && isColdOnly && needsHotCold && !hasSpecialNameOptions && !hasBaseSelection && !hasFlavorSelection && !hasIngredientCustomization) {
       const cfg = this.resolveDrinkVariantPriceConfig(product);
       return {
         name: `${product.name} - Frío 16 oz`,
@@ -1370,8 +1424,7 @@ export class PosComponent implements OnInit, OnDestroy {
     return product.allowFlavorSelection === true;
   }
 
-  private hasFoodCustomization(product: Product): boolean {
-    if (this.normalizeDrinkBaseType(product.drinkBaseType) !== 'food') return false;
+  private hasIngredientCustomization(product: Product): boolean {
     return this.normalizeOptionList(product.removableIngredients).length > 0
       || this.normalizeOptionList(product.extraIngredients).length > 0;
   }
@@ -1411,44 +1464,7 @@ type DrinkOptionsDialogData = {
     <mat-dialog-content class="drink-dialog-content">
       <p class="hint">{{ isFoodProduct ? 'Personaliza el alimento' : 'Selecciona la preparación' }}</p>
 
-      <ng-container *ngIf="isFoodProduct; else drinkCustomization">
-        <ng-container *ngIf="removableIngredients.length">
-          <div class="section-title">Quitar ingredientes</div>
-          <div class="option-grid cols-fluid">
-            <button
-              mat-stroked-button
-              [class.selected]="excludedIngredients.length === 0"
-              (click)="clearExcludedIngredients()"
-            >
-              Todo
-            </button>
-            <button
-              mat-stroked-button
-              *ngFor="let ingredient of removableIngredients"
-              [class.selected]="isIngredientExcluded(ingredient)"
-              (click)="toggleExcludedIngredient(ingredient)"
-            >
-              {{ getRemovableIngredientLabel(ingredient) }}
-            </button>
-          </div>
-        </ng-container>
-
-        <ng-container *ngIf="extraIngredients.length">
-          <div class="section-title">Ingredientes extra</div>
-          <div class="option-grid cols-fluid">
-            <button
-              mat-stroked-button
-              *ngFor="let ingredient of extraIngredients"
-              [class.selected]="isExtraIngredientSelected(ingredient)"
-              (click)="toggleExtraIngredient(ingredient)"
-            >
-              {{ getExtraIngredientLabel(ingredient) }}
-            </button>
-          </div>
-        </ng-container>
-      </ng-container>
-
-      <ng-template #drinkCustomization>
+      <ng-container *ngIf="!isFoodProduct">
       <ng-container *ngIf="isEspresso; else nonEspresso">
         <div class="section-title">Tipo (3 oz)</div>
         <div class="option-grid cols-3">
@@ -1535,7 +1551,42 @@ type DrinkOptionsDialogData = {
           </button>
         </div>
       </ng-container>
-      </ng-template>
+      </ng-container>
+
+      <ng-container *ngIf="removableIngredients.length">
+        <div class="section-title">Quitar ingredientes</div>
+        <div class="option-grid cols-fluid">
+          <button
+            mat-stroked-button
+            [class.selected]="excludedIngredients.length === 0"
+            (click)="clearExcludedIngredients()"
+          >
+            Todo
+          </button>
+          <button
+            mat-stroked-button
+            *ngFor="let ingredient of removableIngredients"
+            [class.selected]="isIngredientExcluded(ingredient)"
+            (click)="toggleExcludedIngredient(ingredient)"
+          >
+            {{ getRemovableIngredientLabel(ingredient) }}
+          </button>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="extraIngredients.length">
+        <div class="section-title">Ingredientes extra</div>
+        <div class="option-grid cols-fluid">
+          <button
+            mat-stroked-button
+            *ngFor="let ingredient of extraIngredients"
+            [class.selected]="isExtraIngredientSelected(ingredient)"
+            (click)="toggleExtraIngredient(ingredient)"
+          >
+            {{ getExtraIngredientLabel(ingredient) }}
+          </button>
+        </div>
+      </ng-container>
 
       <div class="preview-box">
         <span class="preview-label">Se agregará como</span>
@@ -1743,9 +1794,10 @@ export class DrinkOptionsDialogComponent {
 
   get previewName(): string {
     const name = this.data.product.name;
+    const exclusionLabel = this.getExcludedIngredientsSuffix();
+    const extrasLabel = this.getExtraIngredientsSuffix();
+
     if (this.isFoodProduct) {
-      const exclusionLabel = this.getExcludedIngredientsSuffix();
-      const extrasLabel = this.getExtraIngredientsSuffix();
       return `${name}${exclusionLabel}${extrasLabel}`;
     }
 
@@ -1753,33 +1805,35 @@ export class DrinkOptionsDialogComponent {
     const flavorLabel = this.getFlavorNameSuffix();
 
     if (this.isFlatWhite) {
-      return `${name} - Caliente 8 oz${drinkBaseLabel}${flavorLabel}`;
+      return `${name} - Caliente 8 oz${drinkBaseLabel}${flavorLabel}${exclusionLabel}${extrasLabel}`;
     }
 
     if (this.isEspresso) {
       const baseName = this.espressoType === 'normal'
-        ? `${name} - 3 oz`
-        : `${name} ${this.capitalize(this.espressoType)} - 3 oz`;
-      return `${baseName}${drinkBaseLabel}${flavorLabel}`;
+        ? `${name} - 2 oz`
+        : `${name} ${this.capitalize(this.espressoType)} - 2 oz`;
+      return `${baseName}${drinkBaseLabel}${flavorLabel}${exclusionLabel}${extrasLabel}`;
     }
 
     if (this.requiresHotCold) {
       if (this.isColdOnly) {
-        return `${name} - Frío 16 oz${drinkBaseLabel}${flavorLabel}`;
+        return `${name} - Frío 16 oz${drinkBaseLabel}${flavorLabel}${exclusionLabel}${extrasLabel}`;
       }
       const baseName = this.temperature === 'cold'
         ? `${name} - Frío 16 oz`
         : `${name} - Caliente ${this.hotSizeOz} oz`;
-      return `${baseName}${drinkBaseLabel}${flavorLabel}`;
+      return `${baseName}${drinkBaseLabel}${flavorLabel}${exclusionLabel}${extrasLabel}`;
     }
 
-    return `${name}${drinkBaseLabel}${flavorLabel}`;
+    return `${name}${drinkBaseLabel}${flavorLabel}${exclusionLabel}${extrasLabel}`;
   }
 
   get previewPrice(): number {
     const base = this.data.product.price;
+    const ingredientExtra = this.getSelectedExtraIngredientsTotal();
+
     if (this.isFoodProduct) {
-      return base + this.getSelectedExtraIngredientsTotal();
+      return base + ingredientExtra;
     }
 
     const cfg = this.data.priceConfig;
@@ -1787,30 +1841,30 @@ export class DrinkOptionsDialogComponent {
     const flavorExtra = this.getSelectedFlavorExtra();
 
     if (this.isFlatWhite) {
-      return base + cfg.flatWhite8OzExtra + drinkBaseExtra + flavorExtra;
+      return base + cfg.flatWhite8OzExtra + drinkBaseExtra + flavorExtra + ingredientExtra;
     }
 
     if (this.isEspresso) {
       if (this.espressoType === 'doble') {
-        return base + cfg.espresso3OzExtra + cfg.espressoDobleExtra + drinkBaseExtra + flavorExtra;
+        return base + cfg.espresso3OzExtra + cfg.espressoDobleExtra + drinkBaseExtra + flavorExtra + ingredientExtra;
       }
       if (this.espressoType === 'cortado') {
-        return base + cfg.espresso3OzExtra + cfg.espressoCortadoExtra + drinkBaseExtra + flavorExtra;
+        return base + cfg.espresso3OzExtra + cfg.espressoCortadoExtra + drinkBaseExtra + flavorExtra + ingredientExtra;
       }
-      return base + cfg.espresso3OzExtra + drinkBaseExtra + flavorExtra;
+      return base + cfg.espresso3OzExtra + drinkBaseExtra + flavorExtra + ingredientExtra;
     }
 
     if (this.requiresHotCold) {
       if (this.isColdOnly) {
-        return base + cfg.cold16OzExtra + drinkBaseExtra + flavorExtra;
+        return base + cfg.cold16OzExtra + drinkBaseExtra + flavorExtra + ingredientExtra;
       }
       if (this.temperature === 'cold') {
-        return base + cfg.cold16OzExtra + drinkBaseExtra + flavorExtra;
+        return base + cfg.cold16OzExtra + drinkBaseExtra + flavorExtra + ingredientExtra;
       }
-      return base + (this.hotSizeOz === 16 ? cfg.hot16OzExtra : cfg.hot12OzExtra) + drinkBaseExtra + flavorExtra;
+      return base + (this.hotSizeOz === 16 ? cfg.hot16OzExtra : cfg.hot12OzExtra) + drinkBaseExtra + flavorExtra + ingredientExtra;
     }
 
-    return base + drinkBaseExtra + flavorExtra;
+    return base + drinkBaseExtra + flavorExtra + ingredientExtra;
   }
 
   confirm() {

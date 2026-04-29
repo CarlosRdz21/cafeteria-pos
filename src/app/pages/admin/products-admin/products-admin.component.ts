@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +13,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
 import { DrinkBaseType, Product, ProductCategory, ProductServiceTemperature, ProductVariantPricing } from '../../../core/models/domain.models';
 import { buildApiUrl } from '../../../core/config/server.config';
@@ -52,7 +52,15 @@ type AdminProductKind = 'drink' | 'food';
     </mat-toolbar>
 
     <div class="admin-container">
-      <!-- Formulario de edición/creación -->
+      <div class="search-row">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Buscar producto</mat-label>
+          <input matInput [(ngModel)]="searchTerm" placeholder="Nombre o descripción">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <ng-template #productEditorDialog>
       <mat-card class="form-card" *ngIf="editingProduct">
         <mat-card-header>
           <mat-card-title>
@@ -286,10 +294,10 @@ type AdminProductKind = 'drink' | 'food';
               </ng-template>
             </div>
 
-            <div class="drink-base-card full-width" *ngIf="editingProduct && isFoodProduct(editingProduct)">
+            <div class="drink-base-card full-width" *ngIf="editingProduct">
               <div class="drink-base-header">
-                <h3>Personalización de alimento</h3>
-                <p>Configura ingredientes que el cliente puede excluir y extras que sí se cobran</p>
+                <h3>{{ isFoodProduct(editingProduct) ? 'Personalización de alimento' : 'Ingredientes de bebida' }}</h3>
+                <p>Configura ingredientes que el cliente puede quitar y extras que sí se cobran</p>
               </div>
 
               <div class="drink-base-options-header">
@@ -424,10 +432,11 @@ type AdminProductKind = 'drink' | 'food';
           </button>
         </mat-card-actions>
       </mat-card>
+      </ng-template>
 
       <!-- Lista de productos -->
       <div class="products-list">
-        <mat-card *ngFor="let product of products" class="product-item">
+        <mat-card *ngFor="let product of filteredProductsList" class="product-item">
           <div class="product-content">
             <div class="product-image-small">
               <img [src]="product.image" [alt]="product.name" (error)="onImageError($event)">
@@ -462,18 +471,49 @@ type AdminProductKind = 'drink' | 'food';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+    }
+
+    mat-toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      z-index: 100;
+    }
+
     .spacer {
       flex: 1;
     }
 
     .admin-container {
-      padding: 20px;
+      padding: 160px 20px 20px;
       max-width: 1400px;
       margin: 0 auto;
     }
 
     .form-card {
-      margin-bottom: 24px;
+      margin-bottom: 0;
+    }
+
+    .search-row {
+      position: fixed;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(calc(100vw - 40px), 1400px);
+      z-index: 90;
+      margin: 0;
+      padding: 16px 20px 12px;
+      background: #fafafa;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .search-field {
+      width: 100%;
+      max-width: 440px;
     }
 
     .form-grid {
@@ -674,6 +714,11 @@ type AdminProductKind = 'drink' | 'food';
       gap: 16px;
     }
 
+    :host ::ng-deep .product-editor-dialog .mat-mdc-dialog-surface {
+      max-height: 90vh;
+      overflow: auto;
+    }
+
     .product-item {
       padding: 16px;
     }
@@ -778,7 +823,13 @@ type AdminProductKind = 'drink' | 'food';
     }
     @media (max-width: 768px) {
       .admin-container {
-        padding: 12px;
+        padding: 136px 12px 12px;
+      }
+
+      .search-row {
+        top: 56px;
+        width: calc(100vw - 24px);
+        padding: 12px 12px 10px;
       }
 
       .product-content {
@@ -812,12 +863,16 @@ type AdminProductKind = 'drink' | 'food';
   `]
 })
 export class ProductsAdminComponent implements OnInit {
+  @ViewChild('productEditorDialog') productEditorDialog!: TemplateRef<unknown>;
+
   readonly defaultProductImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Qcm9kdWN0bzwvdGV4dD48L3N2Zz4=';
   products: Product[] = [];
   editingProduct: Product | null = null;
   imageFileName: string = '';
+  searchTerm = '';
   productCategoryRows: ProductCategory[] = [];
   productCategories: string[] = [];
+  private productDialogRef: MatDialogRef<unknown> | null = null;
   private readonly defaultVariantPricing: Required<ProductVariantPricing> = {
     hot12OzExtra: 0,
     hot16OzExtra: 10,
@@ -834,6 +889,7 @@ export class ProductsAdminComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private router: Router,
+    private dialog: MatDialog,
     private uiDialog: UiDialogService,
     private snackBar: MatSnackBar
   ) {}
@@ -888,6 +944,18 @@ try {
     return out;
   }
 
+  get filteredProductsList(): Product[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    if (!term) {
+      return this.products;
+    }
+
+    return this.products.filter(product =>
+      product.name.toLowerCase().includes(term)
+      || (product.description || '').toLowerCase().includes(term)
+    );
+  }
+
   addNewProduct() {
     const defaultCategory = this.productCategoryRows[0];
     this.editingProduct = {
@@ -914,6 +982,7 @@ try {
       extraIngredientPrices: {}
     };
     this.imageFileName = '';
+    this.openProductEditorDialog();
   }
 
   editProduct(product: Product) {
@@ -940,13 +1009,18 @@ try {
     };
     this.ensureVariantPricingForServiceTemperature(this.editingProduct);
     this.ensureDrinkBaseOptions(this.editingProduct);
-    this.ensureFoodCustomizationOptions(this.editingProduct);
+    this.ensureIngredientCustomizationOptions(this.editingProduct);
     this.imageFileName = '';
+    this.openProductEditorDialog();
   }
 
-  cancelEdit() {
+  cancelEdit(closeDialog: boolean = true) {
     this.editingProduct = null;
     this.imageFileName = '';
+    if (closeDialog) {
+      this.productDialogRef?.close();
+      this.productDialogRef = null;
+    }
   }
 
   // Manejar selecciÃ³n de archivo
@@ -1145,7 +1219,7 @@ try {
       this.ensureVariantPricingForServiceTemperature(productToSave);
       this.ensureDrinkBaseOptions(productToSave);
       this.ensureFlavorOptions(productToSave);
-      this.ensureFoodCustomizationOptions(productToSave);
+      this.ensureIngredientCustomizationOptions(productToSave);
 
       if (editingProduct.id) {
         // Actualizar
@@ -1159,6 +1233,8 @@ try {
         this.snackBar.open('Producto creado', 'Cerrar', { duration: 2000 });
       }
 
+      this.productDialogRef?.close();
+      this.productDialogRef = null;
       this.editingProduct = null;
       await this.loadProducts();
     } catch (error) {
@@ -1197,6 +1273,28 @@ try {
     if (!this.editingProduct) return;
     this.editingProduct.image = '';
     this.imageFileName = '';
+  }
+
+  private openProductEditorDialog() {
+    if (!this.productEditorDialog) {
+      return;
+    }
+
+    this.productDialogRef?.close();
+    this.productDialogRef = this.dialog.open(this.productEditorDialog, {
+      width: 'min(1120px, 96vw)',
+      maxWidth: '96vw',
+      maxHeight: '90vh',
+      autoFocus: false,
+      panelClass: 'product-editor-dialog'
+    });
+
+    this.productDialogRef.afterClosed().subscribe(() => {
+      this.productDialogRef = null;
+      if (this.editingProduct) {
+        this.cancelEdit(false);
+      }
+    });
   }
 
   canRemoveSelectedImage(): boolean {
@@ -1334,9 +1432,6 @@ try {
       this.editingProduct.waterOptionExtras = {};
       this.editingProduct.flavorOptions = [];
       this.editingProduct.flavorOptionExtras = {};
-      this.editingProduct.removableIngredients = [];
-      this.editingProduct.extraIngredients = [];
-      this.editingProduct.extraIngredientPrices = {};
       this.editingProduct.variantPricing = {
         hot12OzExtra: 0,
         hot16OzExtra: 0,
@@ -1358,7 +1453,7 @@ try {
     this.ensureDrinkBaseOptions(this.editingProduct);
     this.ensureFlavorOptions(this.editingProduct);
     this.ensureVariantPricingForServiceTemperature(this.editingProduct);
-    this.ensureFoodCustomizationOptions(this.editingProduct);
+    this.ensureIngredientCustomizationOptions(this.editingProduct);
   }
 
   onDrinkBaseTypeChange() {
@@ -1497,7 +1592,7 @@ try {
   }
 
   async addRemovableIngredient() {
-    if (!this.editingProduct || !this.isFoodProduct(this.editingProduct)) return;
+    if (!this.editingProduct) return;
 
     const ingredient = this.normalizeOptionValue(await this.uiDialog.prompt({
       title: 'Ingrediente excluible',
@@ -1517,13 +1612,13 @@ try {
   }
 
   removeRemovableIngredient(ingredient: string) {
-    if (!this.editingProduct || !this.isFoodProduct(this.editingProduct)) return;
+    if (!this.editingProduct) return;
     const key = ingredient.toLowerCase();
     this.editingProduct.removableIngredients = this.currentRemovableIngredients.filter(value => value.toLowerCase() !== key);
   }
 
   async addExtraIngredient() {
-    if (!this.editingProduct || !this.isFoodProduct(this.editingProduct)) return;
+    if (!this.editingProduct) return;
 
     const ingredient = this.normalizeOptionValue(await this.uiDialog.prompt({
       title: 'Ingrediente extra',
@@ -1544,7 +1639,7 @@ try {
   }
 
   removeExtraIngredient(ingredient: string) {
-    if (!this.editingProduct || !this.isFoodProduct(this.editingProduct)) return;
+    if (!this.editingProduct) return;
     const key = ingredient.toLowerCase();
     this.editingProduct.extraIngredients = this.currentExtraIngredients.filter(value => value.toLowerCase() !== key);
     const prices = this.getExtraIngredientPriceMap();
@@ -1669,14 +1764,7 @@ try {
     product.flavorOptionExtras = this.ensureOptionExtrasForList(product.flavorOptions, product.flavorOptionExtras);
   }
 
-  private ensureFoodCustomizationOptions(product: Product): void {
-    if (product.drinkBaseType !== 'food') {
-      product.removableIngredients = [];
-      product.extraIngredients = [];
-      product.extraIngredientPrices = {};
-      return;
-    }
-
+  private ensureIngredientCustomizationOptions(product: Product): void {
     product.removableIngredients = this.normalizeOptionList(product.removableIngredients);
     product.extraIngredients = this.normalizeOptionList(product.extraIngredients);
     product.extraIngredientPrices = this.ensureOptionExtrasForList(
