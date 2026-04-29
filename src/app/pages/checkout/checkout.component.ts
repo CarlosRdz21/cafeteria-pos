@@ -873,7 +873,16 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         await this.openCashDrawer();
       }
 
-      await this.printTicket();
+      const shouldPrint = await this.uiDialog.confirm({
+        title: 'Imprimir ticket',
+        message: '¿Deseas imprimir el ticket de esta venta?',
+        confirmText: 'Sí, imprimir',
+        cancelText: 'No'
+      });
+
+      if (shouldPrint) {
+        await this.printTicket();
+      }
 
       this.snackBar.open('¡Venta completada exitosamente!', 'Cerrar', {
         duration: 3000

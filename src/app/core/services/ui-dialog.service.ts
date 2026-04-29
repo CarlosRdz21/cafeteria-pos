@@ -25,6 +25,14 @@ export type PromptDialogOptions = {
   required?: boolean;
   rows?: number;
   inputType?: 'text' | 'number';
+  extraActionText?: string;
+  extraActionValue?: string;
+};
+
+export type PromptDialogResult = {
+  confirmed: boolean;
+  value: string | null;
+  action?: 'confirm' | 'cancel' | 'extra';
 };
 
 @Injectable({ providedIn: 'root' })
@@ -42,14 +50,29 @@ export class UiDialogService {
   }
 
   async prompt(options: PromptDialogOptions): Promise<string | null> {
+    const result = await this.promptWithResult(options);
+    return result.confirmed ? result.value : null;
+  }
+
+  async promptWithResult(options: PromptDialogOptions): Promise<PromptDialogResult> {
     const dialogRef = this.dialog.open(AppPromptDialogComponent, {
       width: '440px',
       maxWidth: '95vw',
+      autoFocus: false,
+      restoreFocus: false,
       data: options
     });
 
     const result = await firstValueFrom(dialogRef.afterClosed());
-    return typeof result === 'string' ? result : null;
+    if (result && typeof result === 'object' && 'action' in result) {
+      return result as PromptDialogResult;
+    }
+
+    if (typeof result === 'string') {
+      return { confirmed: true, value: result, action: 'confirm' };
+    }
+
+    return { confirmed: false, value: null, action: 'cancel' };
   }
 }
 
@@ -123,6 +146,9 @@ export class AppConfirmDialogComponent {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="cancel()">{{ data.cancelText || 'Cancelar' }}</button>
+      <button mat-stroked-button *ngIf="data.extraActionText" (click)="extraAction()">
+        {{ data.extraActionText }}
+      </button>
       <button mat-raised-button color="primary" (click)="confirm()" [disabled]="isInvalid()">
         {{ data.confirmText || 'Aceptar' }}
       </button>
@@ -149,7 +175,7 @@ export class AppPromptDialogComponent {
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: PromptDialogOptions,
-    private dialogRef: MatDialogRef<AppPromptDialogComponent, string | null>
+    private dialogRef: MatDialogRef<AppPromptDialogComponent, PromptDialogResult | string | null>
   ) {
     this.value = data.initialValue ?? '';
   }
@@ -166,10 +192,22 @@ export class AppPromptDialogComponent {
   }
 
   cancel() {
-    this.dialogRef.close(null);
+    this.dialogRef.close({ confirmed: false, value: null, action: 'cancel' });
+  }
+
+  extraAction() {
+    this.dialogRef.close({
+      confirmed: true,
+      value: this.data.extraActionValue ?? this.normalizeValue(),
+      action: 'extra'
+    });
   }
 
   confirm() {
-    this.dialogRef.close(this.normalizeValue());
+    this.dialogRef.close({
+      confirmed: true,
+      value: this.normalizeValue(),
+      action: 'confirm'
+    });
   }
 }

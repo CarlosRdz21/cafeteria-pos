@@ -35,8 +35,20 @@ class ExpensesController {
             const amount = toNumber(body.amount, -1);
             const category = String(body.category || '').trim();
             const concept = String(body.concept || body.description || '').trim();
+            const paidFromCashRegister = body.paidFromCashRegister === true;
             if (!concept || amount <= 0 || !category) {
                 return res.status(400).json({ error: 'concept, category and amount>0 are required' });
+            }
+            let cashRegisterId = body.cashRegisterId == null ? null : toNumber(body.cashRegisterId, 0);
+            if (paidFromCashRegister) {
+                const openRegister = await db.cashRegister.findFirst({
+                    where: { status: 'open' },
+                    orderBy: { openedAt: 'desc' }
+                });
+                if (!openRegister) {
+                    return res.status(400).json({ error: 'No hay caja abierta para descontar este gasto' });
+                }
+                cashRegisterId = toNumber(openRegister.id, 0);
             }
             const max = await db.expense.aggregate({ _max: { id: true } });
             const created = await db.expense.create({
@@ -50,16 +62,17 @@ class ExpensesController {
                     userId: body.userId == null ? null : toNumber(body.userId, 0),
                     userName: body.userName == null ? null : String(body.userName),
                     notes: body.notes == null ? null : String(body.notes),
-                    cashRegisterId: body.cashRegisterId == null ? null : toNumber(body.cashRegisterId, 0)
+                    cashRegisterId,
+                    paidFromCashRegister
                 }
             });
-            if (created.cashRegisterId) {
-                const register = await db.cashRegister.findUnique({ where: { id: created.cashRegisterId } });
-                if (register) {
+            if (paidFromCashRegister && cashRegisterId) {
+                const currentRegister = await db.cashRegister.findUnique({ where: { id: cashRegisterId } });
+                if (currentRegister) {
                     await db.cashRegister.update({
-                        where: { id: register.id },
+                        where: { id: cashRegisterId },
                         data: {
-                            expenses: toNumber(register.expenses, 0) + created.amount
+                            expenses: toNumber(currentRegister.expenses) + amount
                         }
                     });
                 }

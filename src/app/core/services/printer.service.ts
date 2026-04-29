@@ -730,6 +730,7 @@ export class PrinterService {
     const ESC = 0x1b;
     const GS = 0x1d;
     const lineWidth = 32;
+    const totalSales = register.cashSales + register.cardSales;
     const expected = register.expectedAmount ?? (register.openingAmount + register.cashSales - register.expenses);
     const counted = register.closingAmount ?? expected;
     const difference = register.difference ?? (counted - expected);
@@ -756,6 +757,7 @@ export class PrinterService {
     commands.push(this.textToBytes(this.formatLine('Monto inicial', `$${register.openingAmount.toFixed(2)}`, lineWidth)));
     commands.push(this.textToBytes(this.formatLine('Ventas efectivo', `$${register.cashSales.toFixed(2)}`, lineWidth)));
     commands.push(this.textToBytes(this.formatLine('Ventas tarjeta', `$${register.cardSales.toFixed(2)}`, lineWidth)));
+    commands.push(this.textToBytes(this.formatLine('Total ventas', `$${totalSales.toFixed(2)}`, lineWidth)));
     commands.push(this.textToBytes(this.formatLine('Gastos', `$${register.expenses.toFixed(2)}`, lineWidth)));
     commands.push(this.textToBytes(this.formatLine('Transacciones', `${register.totalTransactions}`, lineWidth)));
 

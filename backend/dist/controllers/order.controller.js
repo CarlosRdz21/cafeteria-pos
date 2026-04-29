@@ -7,6 +7,12 @@ const prisma_1 = require("../prisma");
 const payment_service_1 = require("../services/payment.service");
 const cash_registers_controller_1 = require("./cash-registers.controller");
 class OrderController {
+    static getPendingItemMergeKey(item) {
+        const productId = Number(item.productId || 0);
+        const name = String(item.name || '').trim();
+        const price = Number(item.price || 0).toFixed(2);
+        return `${productId}::${name}::${price}`;
+    }
     static async create(req, res) {
         try {
             const { items, status, paymentMethod, amountPaid, paymentDetails, discountTotal, appliedPromotions, tableNumber, customerName, notes } = req.body;
@@ -51,6 +57,11 @@ class OrderController {
                 }
                 await payment_service_1.PaymentService.registerPayment(order.id, paymentMethod, paymentMethod === 'cash' ? amountPaid : undefined, paymentDetails);
                 await cash_registers_controller_1.CashRegistersController.applySaleToOpenRegister(paymentMethod, total);
+            }
+            if ((status ?? 'pending') === 'pending') {
+                const io = (0, socket_1.getIO)();
+                io.to('baristas').emit('new-order', order);
+                io.to('admins').emit('new-order', order);
             }
             res.status(201).json(order);
         }
@@ -134,7 +145,7 @@ class OrderController {
                     }
                     const mergedItemsMap = new Map();
                     for (const item of pendingOrder.items) {
-                        mergedItemsMap.set(item.productId, {
+                        mergedItemsMap.set(OrderController.getPendingItemMergeKey(item), {
                             productId: item.productId,
                             name: item.name,
                             quantity: item.quantity,
@@ -143,13 +154,14 @@ class OrderController {
                         });
                     }
                     for (const item of items) {
-                        const existing = mergedItemsMap.get(item.productId);
+                        const mergeKey = OrderController.getPendingItemMergeKey(item);
+                        const existing = mergedItemsMap.get(mergeKey);
                         if (existing) {
                             existing.quantity += item.quantity;
                             existing.subtotal = existing.price * existing.quantity;
                         }
                         else {
-                            mergedItemsMap.set(item.productId, {
+                            mergedItemsMap.set(mergeKey, {
                                 productId: item.productId,
                                 name: item.name,
                                 quantity: item.quantity,
@@ -189,10 +201,75 @@ class OrderController {
                     });
                 }
             }
-            res.json({ success: true });
+            const updatedOrder = await prisma_1.prisma.order.findUnique({
+                where: { id: orderId },
+                include: { items: true }
+            });
+            if (!updatedOrder) {
+                return res.status(404).json({ error: 'Orden no encontrada' });
+            }
+            const io = (0, socket_1.getIO)();
+            io.to('waiters').emit('order-updated', updatedOrder);
+            io.to('baristas').emit('order-updated', updatedOrder);
+            io.to('admins').emit('order-updated', updatedOrder);
+            res.json(updatedOrder);
         }
         catch (error) {
             console.error('❌ Error updating order:', error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+    static async replacePendingOrder(req, res) {
+        try {
+            const orderId = Number(req.params.id);
+            const items = Array.isArray(req.body?.items) ? req.body.items : [];
+            if (!orderId) {
+                return res.status(400).json({ error: 'Invalid order id' });
+            }
+            if (items.length === 0) {
+                return res.status(400).json({ error: 'La orden debe tener al menos un producto' });
+            }
+            const existingOrder = await prisma_1.prisma.order.findUnique({
+                where: { id: orderId },
+                include: { items: true }
+            });
+            if (!existingOrder) {
+                return res.status(404).json({ error: 'Orden no encontrada' });
+            }
+            if (existingOrder.status !== 'pending') {
+                return res.status(400).json({ error: 'Solo se pueden editar comandas pendientes' });
+            }
+            const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+            const tax = 0;
+            const total = subtotal + tax;
+            const updatedOrder = await prisma_1.prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    subtotal,
+                    tax,
+                    total,
+                    items: {
+                        deleteMany: {},
+                        create: items.map((item) => ({
+                            productId: item.productId,
+                            name: item.name,
+                            quantity: Number(item.quantity || 0),
+                            price: Number(item.price || 0),
+                            subtotal: Number(item.price || 0) * Number(item.quantity || 0)
+                        }))
+                    }
+                },
+                include: {
+                    items: true
+                }
+            });
+            const io = (0, socket_1.getIO)();
+            io.to('waiters').emit('order-updated', updatedOrder);
+            io.to('admins').emit('order-updated', updatedOrder);
+            res.json(updatedOrder);
+        }
+        catch (error) {
+            console.error('❌ Error replacing pending order items:', error);
             res.status(500).json({ error: error.message });
         }
     }
@@ -208,6 +285,7 @@ class OrderController {
             });
             // 🔔 Notificar por socket
             const io = (0, socket_1.getIO)();
+            io.to('baristas').emit('order-cancelled', order.id);
             io.to('waiters').emit('order-updated', order);
             io.to('admins').emit('order-updated', order);
             res.json(order);

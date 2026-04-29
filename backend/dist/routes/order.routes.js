@@ -6,6 +6,7 @@ const router = (0, express_1.Router)();
 router.post('/', order_controller_1.OrderController.create);
 router.get('/', order_controller_1.OrderController.list);
 router.get('/:id', order_controller_1.OrderController.getById);
+router.put('/:id', order_controller_1.OrderController.replacePendingOrder);
 router.patch('/:id/status', order_controller_1.OrderController.updateStatus);
 router.patch('/:id/cancel', order_controller_1.OrderController.cancel);
 exports.default = router;

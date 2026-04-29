@@ -21,6 +21,7 @@ const supply_categories_routes_1 = __importDefault(require("./routes/supply-cate
 const supply_movements_routes_1 = __importDefault(require("./routes/supply-movements.routes"));
 const expenses_routes_1 = __importDefault(require("./routes/expenses.routes"));
 const printer_settings_routes_1 = __importDefault(require("./routes/printer-settings.routes"));
+const promotions_routes_1 = __importDefault(require("./routes/promotions.routes"));
 const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -108,6 +109,7 @@ app.use('/api/supply-categories', supply_categories_routes_1.default);
 app.use('/api/supply-movements', supply_movements_routes_1.default);
 app.use('/api/expenses', expenses_routes_1.default);
 app.use('/api/printer-settings', printer_settings_routes_1.default);
+app.use('/api/promotions', promotions_routes_1.default);
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: {
