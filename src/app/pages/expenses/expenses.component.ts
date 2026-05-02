@@ -151,14 +151,14 @@ interface CategoryTotal {
           <div class="filters-row">
             <mat-form-field appearance="outline">
               <mat-label>Inicio</mat-label>
-              <input matInput [matDatepicker]="filterStart" [(ngModel)]="startDate" (ngModelChange)="applyFilters()">
+              <input matInput [matDatepicker]="filterStart" [(ngModel)]="startDate" (ngModelChange)="onDateRangeChange()">
               <mat-datepicker-toggle matSuffix [for]="filterStart"></mat-datepicker-toggle>
               <mat-datepicker #filterStart></mat-datepicker>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Fin</mat-label>
-              <input matInput [matDatepicker]="filterEnd" [(ngModel)]="endDate" (ngModelChange)="applyFilters()">
+              <input matInput [matDatepicker]="filterEnd" [(ngModel)]="endDate" (ngModelChange)="onDateRangeChange()">
               <mat-datepicker-toggle matSuffix [for]="filterEnd"></mat-datepicker-toggle>
               <mat-datepicker #filterEnd></mat-datepicker>
             </mat-form-field>
@@ -461,8 +461,15 @@ export class ExpensesComponent implements OnInit {
   }
 
   async loadExpenses() {
-    this.expenses = await this.expenseService.getByDateRange(this.startDate, this.endDate);
+    this.expenses = await this.expenseService.getByDateRange(
+      startOfDay(this.startDate),
+      endOfDay(this.endDate)
+    );
     this.applyFilters();
+  }
+
+  async onDateRangeChange() {
+    await this.loadExpenses();
   }
 
   applyFilters() {
@@ -565,7 +572,7 @@ export class ExpensesComponent implements OnInit {
   setToday() {
     this.startDate = startOfDay(new Date());
     this.endDate = endOfDay(new Date());
-    this.applyFilters();
+    void this.loadExpenses();
   }
 
   formatDate(date: Date | string): string {
