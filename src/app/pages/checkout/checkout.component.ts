@@ -21,6 +21,7 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { UiDialogService } from '../../core/services/ui-dialog.service';
 import { PromotionPricingResult, PromotionService } from '../../core/services/promotion.service';
 import { buildApiUrl } from '../../core/config/server.config';
+import { BlankZeroNumberDirective } from '../../shared/directives/blank-zero-number.directive';
 
 
 
@@ -39,7 +40,8 @@ import { buildApiUrl } from '../../core/config/server.config';
     MatSnackBarModule,
     MatProgressSpinnerModule,
     MatButtonToggleModule,
-    MatDialogModule
+    MatDialogModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <div class="checkout-container">
@@ -119,6 +121,7 @@ import { buildApiUrl } from '../../core/config/server.config';
               <input
                 matInput
                 type="number"
+                appBlankZero
                 [(ngModel)]="amountReceived"
                 (ngModelChange)="calculateChange()"
                 placeholder="0.00"

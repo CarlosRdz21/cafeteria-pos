@@ -18,6 +18,7 @@ import { firstValueFrom } from 'rxjs';
 import { DrinkBaseType, Product, ProductCategory, ProductServiceTemperature, ProductVariantPricing } from '../../../core/models/domain.models';
 import { buildApiUrl } from '../../../core/config/server.config';
 import { UiDialogService } from '../../../core/services/ui-dialog.service';
+import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-number.directive';
 
 type AdminProductKind = 'drink' | 'food';
 
@@ -37,7 +38,8 @@ type AdminProductKind = 'drink' | 'food';
     MatSlideToggleModule,
     MatSnackBarModule,
     MatTableModule,
-    MatDialogModule
+    MatDialogModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <mat-toolbar color="primary">
@@ -82,13 +84,13 @@ type AdminProductKind = 'drink' | 'food';
 
             <mat-form-field appearance="outline">
               <mat-label>Precio</mat-label>
-              <input matInput type="number" [(ngModel)]="editingProduct.price" step="0.01" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.price" step="0.01" min="0">
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Stock</mat-label>
-              <input matInput type="number" [(ngModel)]="editingProduct.stock" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.stock" min="0">
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -149,6 +151,7 @@ type AdminProductKind = 'drink' | 'food';
                       <input
                         matInput
                         type="number"
+                        appBlankZero
                         step="0.01"
                         min="0"
                         [ngModel]="getDrinkBaseExtraValue(option)"
@@ -204,6 +207,7 @@ type AdminProductKind = 'drink' | 'food';
                       <input
                         matInput
                         type="number"
+                        appBlankZero
                         step="0.01"
                         min="0"
                         [ngModel]="getFlavorExtraValue(option)"
@@ -242,43 +246,43 @@ type AdminProductKind = 'drink' | 'food';
               <div class="variant-pricing-grid" *ngIf="editingProduct.serviceTemperature !== 'cold-only'; else coldOnlyPricing">
                 <mat-form-field appearance="outline">
                   <mat-label>Caliente 12 oz (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.hot12OzExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.hot12OzExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Caliente 16 oz (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.hot16OzExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.hot16OzExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Frío 16 oz (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.cold16OzExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.cold16OzExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Flat White 8 oz (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.flatWhite8OzExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.flatWhite8OzExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Espresso base 3 oz (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.espresso3OzExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.espresso3OzExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Espresso doble (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.espressoDobleExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.espressoDobleExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
                   <mat-label>Espresso cortado (+)</mat-label>
-                  <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.espressoCortadoExtra" step="0.01">
+                  <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.espressoCortadoExtra" step="0.01">
                   <span matPrefix>$&nbsp;</span>
                 </mat-form-field>
               </div>
@@ -287,7 +291,7 @@ type AdminProductKind = 'drink' | 'food';
                 <div class="variant-pricing-grid">
                   <mat-form-field appearance="outline">
                     <mat-label>Frío 16 oz (+)</mat-label>
-                    <input matInput type="number" [(ngModel)]="editingProduct.variantPricing!.cold16OzExtra" step="0.01">
+                    <input matInput type="number" appBlankZero [(ngModel)]="editingProduct.variantPricing!.cold16OzExtra" step="0.01">
                     <span matPrefix>$&nbsp;</span>
                   </mat-form-field>
                 </div>
@@ -342,6 +346,7 @@ type AdminProductKind = 'drink' | 'food';
                     <input
                       matInput
                       type="number"
+                      appBlankZero
                       step="0.01"
                       min="0"
                       [ngModel]="getExtraIngredientPrice(ingredient)"

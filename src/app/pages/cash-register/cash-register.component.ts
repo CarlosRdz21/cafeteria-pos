@@ -19,6 +19,7 @@ import { PrinterService } from '../../core/services/printer.service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Subject, takeUntil } from 'rxjs';
+import { BlankZeroNumberDirective } from '../../shared/directives/blank-zero-number.directive';
 
 @Component({
   selector: 'app-cash-register',
@@ -35,7 +36,8 @@ import { Subject, takeUntil } from 'rxjs';
     MatTabsModule,
     MatTableModule,
     MatSnackBarModule,
-    MatToolbarModule
+    MatToolbarModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <mat-toolbar color="primary">
@@ -69,6 +71,7 @@ import { Subject, takeUntil } from 'rxjs';
                   <input
                     matInput
                     type="number"
+                    appBlankZero
                     [(ngModel)]="openingAmount"
                     placeholder="0.00"
                     step="0.01"
@@ -302,9 +305,10 @@ import { Subject, takeUntil } from 'rxjs';
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Efectivo Contado</mat-label>
                <input
-                 matInput
-                 type="number"
-                 [(ngModel)]="closingAmount"
+                  matInput
+                  type="number"
+                  appBlankZero
+                  [(ngModel)]="closingAmount"
                  (ngModelChange)="calculateDifference()"
                  placeholder="0.00"
                  step="0.01"

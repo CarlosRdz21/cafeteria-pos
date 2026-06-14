@@ -18,6 +18,7 @@ import { AuthService, User } from '../../core/services/auth.service';
 import { Supply, SupplyCategory, SupplyMovement } from '../../core/models/domain.models';
 import { endOfDay, format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BlankZeroNumberDirective } from '../../shared/directives/blank-zero-number.directive';
 
 @Component({
   selector: 'app-inventory-movements',
@@ -35,7 +36,8 @@ import { es } from 'date-fns/locale';
     MatDatepickerModule,
     MatNativeDateModule,
     MatTableModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <mat-toolbar color="primary">
@@ -72,12 +74,12 @@ import { es } from 'date-fns/locale';
 
             <mat-form-field appearance="outline">
               <mat-label>Cantidad</mat-label>
-              <input matInput type="number" [(ngModel)]="movementForm.quantity" step="0.001" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="movementForm.quantity" step="0.001" min="0">
             </mat-form-field>
 
             <mat-form-field appearance="outline" *ngIf="movementForm.type === 'in'">
               <mat-label>Costo Unitario</mat-label>
-              <input matInput type="number" [(ngModel)]="movementForm.unitCost" step="0.01" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="movementForm.unitCost" step="0.01" min="0">
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 

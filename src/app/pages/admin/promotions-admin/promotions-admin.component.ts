@@ -16,6 +16,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Product, ProductCategory } from '../../../core/models/domain.models';
 import { buildApiUrl } from '../../../core/config/server.config';
 import { Promotion, PromotionService } from '../../../core/services/promotion.service';
+import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-number.directive';
 
 @Component({
   selector: 'app-promotions-admin',
@@ -31,7 +32,8 @@ import { Promotion, PromotionService } from '../../../core/services/promotion.se
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <mat-toolbar color="primary">
@@ -83,17 +85,17 @@ import { Promotion, PromotionService } from '../../../core/services/promotion.se
 
             <mat-form-field appearance="outline" *ngIf="editingPromotion.type === 'percentage_discount'">
               <mat-label>Descuento (%)</mat-label>
-              <input matInput type="number" min="0" max="100" step="0.01" [(ngModel)]="editingPromotion.percentageOff">
+              <input matInput type="number" appBlankZero min="0" max="100" step="0.01" [(ngModel)]="editingPromotion.percentageOff">
             </mat-form-field>
 
             <mat-form-field appearance="outline" *ngIf="editingPromotion.type === 'bundle_price'">
               <mat-label>Cantidad requerida</mat-label>
-              <input matInput type="number" min="2" step="1" [(ngModel)]="editingPromotion.bundleQuantity">
+              <input matInput type="number" appBlankZero min="2" step="1" [(ngModel)]="editingPromotion.bundleQuantity">
             </mat-form-field>
 
             <mat-form-field appearance="outline" *ngIf="editingPromotion.type === 'bundle_price'">
               <mat-label>Precio del combo</mat-label>
-              <input matInput type="number" min="0" step="0.01" [(ngModel)]="editingPromotion.bundlePrice">
+              <input matInput type="number" appBlankZero min="0" step="0.01" [(ngModel)]="editingPromotion.bundlePrice">
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 

@@ -15,6 +15,7 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { InventoryService } from '../../../core/services/inventory.service';
 import { UiDialogService } from '../../../core/services/ui-dialog.service';
 import { Supply, SupplyCategory } from '../../../core/models/domain.models';
+import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-number.directive';
 
 @Component({
   selector: 'app-supplies-admin',
@@ -30,7 +31,8 @@ import { Supply, SupplyCategory } from '../../../core/models/domain.models';
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <mat-toolbar color="primary">
@@ -83,17 +85,17 @@ import { Supply, SupplyCategory } from '../../../core/models/domain.models';
 
             <mat-form-field appearance="outline">
               <mat-label>Stock Actual</mat-label>
-              <input matInput type="number" [(ngModel)]="editingSupply.currentStock" step="0.001" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="editingSupply.currentStock" step="0.001" min="0">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Stock Mínimo</mat-label>
-              <input matInput type="number" [(ngModel)]="editingSupply.minStock" step="0.001" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="editingSupply.minStock" step="0.001" min="0">
             </mat-form-field>
 
             <mat-form-field appearance="outline">
               <mat-label>Costo Unidad</mat-label>
-              <input matInput type="number" [(ngModel)]="editingSupply.unitCost" step="0.01" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="editingSupply.unitCost" step="0.01" min="0">
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 

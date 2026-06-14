@@ -22,6 +22,7 @@ import { ExpenseService } from '../../core/services/expense.service';
 import { CashRegisterService } from '../../core/services/cash-register.service';
 import { endOfDay, format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BlankZeroNumberDirective } from '../../shared/directives/blank-zero-number.directive';
 
 interface CategoryTotal {
   category: string;
@@ -46,7 +47,8 @@ interface CategoryTotal {
     MatDialogModule,
     MatTableModule,
     MatSnackBarModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    BlankZeroNumberDirective
   ],
   template: `
     <mat-toolbar color="primary">
@@ -76,7 +78,7 @@ interface CategoryTotal {
 
             <mat-form-field appearance="outline">
               <mat-label>Monto</mat-label>
-              <input matInput type="number" [(ngModel)]="newExpense.amount" step="0.01" min="0">
+              <input matInput type="number" appBlankZero [(ngModel)]="newExpense.amount" step="0.01" min="0">
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 
