@@ -12,16 +12,32 @@ export class PaymentService {
     orderId: number,
     method: 'cash' | 'card',
     amountPaid?: number,
-    details?: PaymentDetails
+    details?: PaymentDetails,
+    client?: any
   ) {
     // 🔎 Obtener la orden para conocer el total
-    const db = prisma as any;
+    const db = client ?? (prisma as any);
     const order = await db.order.findUnique({
       where: { id: orderId }
     });
 
     if (!order) {
       throw new Error('Orden no encontrada');
+    }
+
+    const existingPayment = await db.payment.findFirst({
+      where: { orderId },
+      orderBy: { paidAt: 'asc' }
+    });
+
+    if (existingPayment) {
+      if (order.status !== 'completed') {
+        await db.order.update({
+          where: { id: orderId },
+          data: { status: 'completed' }
+        });
+      }
+      return existingPayment;
     }
 
     const payment = await db.payment.create({

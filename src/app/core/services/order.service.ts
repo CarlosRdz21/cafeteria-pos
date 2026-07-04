@@ -8,11 +8,14 @@ import { buildApiUrl } from '../config/server.config';
   providedIn: 'root'
 })
 export class OrderService {
+  private readonly currentOrderStorageKey = 'cafeteria-pos.current-order';
   private currentOrderSubject = new BehaviorSubject<OrderItem[]>([]);
   public currentOrder$ = this.currentOrderSubject.asObservable();
   private readonly TAX_RATE = 0;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    this.restoreCurrentOrder();
+  }
 
   addItem(product: Product, quantity: number = 1, customName?: string, customPrice?: number) {
     const currentItems = this.currentOrderSubject.value;
@@ -35,7 +38,7 @@ export class OrderService {
       });
     }
 
-    this.currentOrderSubject.next([...currentItems]);
+    this.setCurrentOrder([...currentItems]);
   }
 
   updateItemQuantity(itemRef: number | Pick<OrderItem, 'productId' | 'name'>, quantity: number) {
@@ -49,16 +52,16 @@ export class OrderService {
       currentItems[itemIndex].quantity = quantity;
       currentItems[itemIndex].subtotal = currentItems[itemIndex].price * quantity;
     }
-    this.currentOrderSubject.next([...currentItems]);
+    this.setCurrentOrder([...currentItems]);
   }
 
   removeItem(itemRef: number | Pick<OrderItem, 'productId' | 'name'>) {
     const currentItems = this.currentOrderSubject.value;
-    this.currentOrderSubject.next(currentItems.filter(item => !this.matchesItem(item, itemRef)));
+    this.setCurrentOrder(currentItems.filter(item => !this.matchesItem(item, itemRef)));
   }
 
   clearOrder() {
-    this.currentOrderSubject.next([]);
+    this.setCurrentOrder([]);
   }
 
   calculateTotals() {
@@ -155,6 +158,47 @@ export class OrderService {
 
   getCurrentOrder(): OrderItem[] {
     return this.currentOrderSubject.value;
+  }
+
+  private setCurrentOrder(items: OrderItem[]): void {
+    this.currentOrderSubject.next(items);
+    try {
+      if (items.length) {
+        sessionStorage.setItem(this.currentOrderStorageKey, JSON.stringify(items));
+      } else {
+        sessionStorage.removeItem(this.currentOrderStorageKey);
+      }
+    } catch {
+      // El flujo sigue funcionando aunque el navegador bloquee sessionStorage.
+    }
+  }
+
+  private restoreCurrentOrder(): void {
+    try {
+      const stored = sessionStorage.getItem(this.currentOrderStorageKey);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return;
+
+      const items = parsed.filter(item =>
+        Number.isFinite(Number(item?.productId))
+        && typeof item?.name === 'string'
+        && Number(item?.quantity) > 0
+        && Number.isFinite(Number(item?.price))
+      ).map(item => ({
+        productId: Number(item.productId),
+        name: item.name,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        subtotal: Number(item.price) * Number(item.quantity)
+      }));
+
+      if (items.length) {
+        this.currentOrderSubject.next(items);
+      }
+    } catch {
+      sessionStorage.removeItem(this.currentOrderStorageKey);
+    }
   }
 
   private getOrderItemKey(item: Pick<OrderItem, 'productId' | 'name'>): string {

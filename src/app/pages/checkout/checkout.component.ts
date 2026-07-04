@@ -596,7 +596,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
     // Si hay una orden pendiente, cargarla
     if (this.pendingOrderId) {
-      await this.loadPendingOrder(this.pendingOrderId);
+      const loaded = await this.loadPendingOrder(this.pendingOrderId);
+      if (!loaded) return;
     } else {
       // Cargar orden actual del servicio
       this.currentOrder = this.orderService.getCurrentOrder();
@@ -629,27 +630,33 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     this.stopPointPolling();
   }
 
-  async loadPendingOrder(orderId: number) {
-    try {
-      console.log('Cargando orden pendiente ID:', orderId);
-      const order = await this.pendingOrdersService.getPendingOrder(orderId);
-      
-      console.log('Orden obtenida de BD:', order);
-      
-      if (order && order.items && order.items.length > 0) {
-        this.currentOrder = [...order.items]; // Crear una copia nueva del array
-        this.refreshPricingSummary();
-        console.log('Orden pendiente cargada exitosamente. Items:', this.currentOrder.length);
-      } else {
-        throw new Error('Orden no encontrada o sin items');
+  async loadPendingOrder(orderId: number): Promise<boolean> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const order = await this.pendingOrdersService.getPendingOrder(orderId);
+        if (order?.items?.length > 0) {
+          this.currentOrder = [...order.items];
+          this.refreshPricingSummary();
+          return true;
+        }
+        lastError = new Error('Orden no encontrada o sin productos');
+      } catch (error) {
+        lastError = error;
       }
-    } catch (error) {
-      console.error('Error al cargar orden pendiente:', error);
-      this.snackBar.open('Error al cargar la orden', 'Cerrar', {
-        duration: 3000
-      });
-      this.router.navigate(['/pending-orders']);
+
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+      }
     }
+
+    console.error('Error al cargar orden pendiente:', lastError);
+    this.snackBar.open('No se pudo cargar la orden. Intenta nuevamente.', 'Cerrar', {
+      duration: 3500
+    });
+    this.router.navigate(['/pending-orders']);
+    return false;
   }
 
   calculateQuickAmounts() {
@@ -835,7 +842,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   }
 
   async completePayment() {
-    if (!this.canComplete()) return;
+    if (this.processing || !this.canComplete()) return;
 
     this.processing = true;
 

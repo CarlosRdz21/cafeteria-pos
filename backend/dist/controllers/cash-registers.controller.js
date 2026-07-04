@@ -143,19 +143,21 @@ class CashRegistersController {
             res.status(500).json({ error: error?.message || 'Error recording expense' });
         }
     }
-    static async applySaleToOpenRegister(paymentMethod, amount) {
-        const open = await db.cashRegister.findFirst({
+    static async applySaleToOpenRegister(paymentMethod, amount, client) {
+        const database = client ?? db;
+        const open = await database.cashRegister.findFirst({
             where: { status: 'open' },
             orderBy: { openedAt: 'desc' }
         });
         if (!open)
             return null;
-        return db.cashRegister.update({
+        return database.cashRegister.update({
             where: { id: open.id },
             data: {
-                totalTransactions: toNumber(open.totalTransactions) + 1,
-                cashSales: paymentMethod === 'cash' ? toNumber(open.cashSales) + amount : toNumber(open.cashSales),
-                cardSales: paymentMethod === 'card' ? toNumber(open.cardSales) + amount : toNumber(open.cardSales)
+                totalTransactions: { increment: 1 },
+                ...(paymentMethod === 'cash'
+                    ? { cashSales: { increment: amount } }
+                    : { cardSales: { increment: amount } })
             }
         });
     }

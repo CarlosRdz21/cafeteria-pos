@@ -46,14 +46,23 @@ export class OrderController {
       const tax = 0;
       const total = subtotal + tax;
 
-      const order = await prisma.order.create({
+      const requestedStatus = status ?? 'pending';
+      if (requestedStatus === 'completed' && !paymentMethod) {
+        return res.status(400).json({ error: 'Payment method required' });
+      }
+      if (requestedStatus === 'completed' && paymentMethod === 'cash' && (amountPaid === undefined || amountPaid === null)) {
+        return res.status(400).json({ error: 'amountPaid required for cash payments' });
+      }
+
+      const order = await prisma.$transaction(async tx => {
+        const createdOrder = await tx.order.create({
         data: {
           subtotal,
           tax,
           total,
           discountTotal: Number(discountTotal || 0),
           appliedPromotions: appliedPromotions ?? null,
-          status: status ?? 'pending',
+          status: requestedStatus,
           tableNumber,
           customerName,
           notes,
@@ -71,28 +80,24 @@ export class OrderController {
         include: {
           items: true
         }
-      });
+        });
 
       // Si la orden ya estÃ¡ completada, registrar el pago para que aparezca en reportes
-      if ((status ?? 'pending') === 'completed') {
-        if (!paymentMethod) {
-          return res.status(400).json({ error: 'Payment method required' });
-        }
-
-        if (paymentMethod === 'cash' && (amountPaid === undefined || amountPaid === null)) {
-          return res.status(400).json({ error: 'amountPaid required for cash payments' });
-        }
-
+      if (requestedStatus === 'completed') {
         await PaymentService.registerPayment(
-          order.id,
+          createdOrder.id,
           paymentMethod,
           paymentMethod === 'cash' ? amountPaid : undefined,
-          paymentDetails
+          paymentDetails,
+          tx
         );
-        await CashRegistersController.applySaleToOpenRegister(paymentMethod, total);
+        await CashRegistersController.applySaleToOpenRegister(paymentMethod, total, tx);
       }
 
-      if ((status ?? 'pending') === 'pending') {
+        return createdOrder;
+      });
+
+      if (requestedStatus === 'pending') {
         const io = getIO();
         io.to('baristas').emit('new-order', order);
         io.to('admins').emit('new-order', order);
@@ -137,6 +142,14 @@ export class OrderController {
       }
 
       if (status === 'completed') {
+        if (existingOrder.status === 'completed') {
+          const completedOrder = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { items: true }
+          });
+          return res.json(completedOrder);
+        }
+
         let effectiveTotal = existingOrder.total;
 
         if (Array.isArray(items) && items.length > 0) {

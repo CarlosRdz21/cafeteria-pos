@@ -1587,11 +1587,19 @@ export class ReportsComponent implements OnInit {
   }
 
   async loadReports() {
-    const payments: Payment[] =
+    const selectedStart = startOfDay(this.startDate);
+    const selectedEnd = endOfDay(this.endDate);
+    const rangeStart = selectedStart <= selectedEnd ? selectedStart : startOfDay(this.endDate);
+    const rangeEnd = selectedStart <= selectedEnd ? selectedEnd : endOfDay(this.startDate);
+    this.startDate = rangeStart;
+    this.endDate = rangeEnd;
+
+    const paymentRows: Payment[] =
       await this.paymentService.getPaymentsByDateRange(
         this.startDate,
         this.endDate
       ) ?? [];
+    const payments = this.deduplicatePaymentsByOrder(paymentRows);
 
 
     this.calculateStatsFromPayments(payments);
@@ -1611,6 +1619,27 @@ export class ReportsComponent implements OnInit {
     this.calculateProductStats();
     await this.loadExpenses();
     this.calculateFinancialSummary();
+  }
+
+  private deduplicatePaymentsByOrder(payments: Payment[]): Payment[] {
+    const byOrder = new Map<number, Payment>();
+    const withoutOrder: Payment[] = [];
+
+    for (const payment of payments) {
+      const orderId = Number(payment.order?.id);
+      if (!Number.isFinite(orderId) || orderId <= 0) {
+        withoutOrder.push(payment);
+        continue;
+      }
+
+      const current = byOrder.get(orderId);
+      if (!current || new Date(payment.paidAt).getTime() < new Date(current.paidAt).getTime()) {
+        byOrder.set(orderId, payment);
+      }
+    }
+
+    return [...byOrder.values(), ...withoutOrder]
+      .sort((left, right) => new Date(right.paidAt).getTime() - new Date(left.paidAt).getTime());
   }
 
 

@@ -3,14 +3,27 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentService = void 0;
 const prisma_1 = require("../prisma");
 class PaymentService {
-    static async registerPayment(orderId, method, amountPaid, details) {
+    static async registerPayment(orderId, method, amountPaid, details, client) {
         // 🔎 Obtener la orden para conocer el total
-        const db = prisma_1.prisma;
+        const db = client ?? prisma_1.prisma;
         const order = await db.order.findUnique({
             where: { id: orderId }
         });
         if (!order) {
             throw new Error('Orden no encontrada');
+        }
+        const existingPayment = await db.payment.findFirst({
+            where: { orderId },
+            orderBy: { paidAt: 'asc' }
+        });
+        if (existingPayment) {
+            if (order.status !== 'completed') {
+                await db.order.update({
+                    where: { id: orderId },
+                    data: { status: 'completed' }
+                });
+            }
+            return existingPayment;
         }
         const payment = await db.payment.create({
             data: {
