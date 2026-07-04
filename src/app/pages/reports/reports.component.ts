@@ -22,6 +22,7 @@ import { PaymentService } from '../../core/services/payment.service';
 import { buildApiUrl } from '../../core/config/server.config';
 import { firstValueFrom } from 'rxjs';
 import { ExpenseService } from '../../core/services/expense.service';
+import { AuthService } from '../../core/services/auth.service';
 
 interface SalesStats {
   totalSales: number;
@@ -107,12 +108,12 @@ interface FinancialSummary {
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
-      <span>Reportes y Estadísticas</span>
+      <span>{{ isBaristaView ? 'Historial de ventas de hoy' : 'Reportes y Estadísticas' }}</span>
     </mat-toolbar>
 
     <div class="reports-container">
       <!-- Filtros de fecha -->
-      <mat-card class="filters-card">
+      <mat-card class="filters-card" *ngIf="!isBaristaView">
         <mat-card-content>
           <div class="filters-row">
             <mat-form-field appearance="outline">
@@ -149,7 +150,7 @@ interface FinancialSummary {
 
       <mat-tab-group>
         <!-- Tab: Resumen de Ventas -->
-        <mat-tab label="Resumen">
+        <mat-tab label="Resumen" *ngIf="!isBaristaView">
           <div class="tab-content">
             <!-- KPIs -->
             <div class="kpi-grid">
@@ -402,7 +403,7 @@ interface FinancialSummary {
         </mat-tab>
 
         <!-- Tab: Productos Vendidos -->
-        <mat-tab label="Productos">
+        <mat-tab label="Productos" *ngIf="!isBaristaView">
           <div class="tab-content">
             <mat-card>
               <mat-card-header>
@@ -535,7 +536,7 @@ interface FinancialSummary {
         </mat-tab>
 
         <!-- Tab: Inventario -->
-        <mat-tab label="Inventario">
+        <mat-tab label="Inventario" *ngIf="!isBaristaView">
           <div class="tab-content">
             <mat-card>
               <mat-card-header>
@@ -569,7 +570,7 @@ interface FinancialSummary {
         </mat-tab>
 
         <!-- Tab: Gastos -->
-        <mat-tab label="Gastos">
+        <mat-tab label="Gastos" *ngIf="!isBaristaView">
           <div class="tab-content">
             <mat-card>
               <mat-card-header>
@@ -1479,6 +1480,7 @@ interface FinancialSummary {
 })
 
 export class ReportsComponent implements OnInit {
+  isBaristaView = false;
   selectedPeriod = 'today';
   startDate: Date = new Date();
   endDate: Date = new Date();
@@ -1523,11 +1525,15 @@ export class ReportsComponent implements OnInit {
     private paymentService: PaymentService,
     private http: HttpClient,
     private expenseService: ExpenseService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
   async ngOnInit() {
-    await this.loadProducts();
+    this.isBaristaView = this.authService.hasRole('barista');
+    if (!this.isBaristaView) {
+      await this.loadProducts();
+    }
     this.onPeriodChange();
   }
 
@@ -1567,6 +1573,14 @@ export class ReportsComponent implements OnInit {
 
   onPeriodChange() {
     const now = new Date();
+
+    if (this.isBaristaView) {
+      this.selectedPeriod = 'today';
+      this.startDate = startOfDay(now);
+      this.endDate = endOfDay(now);
+      this.loadReports();
+      return;
+    }
     
     switch (this.selectedPeriod) {
       case 'today':
@@ -1615,10 +1629,12 @@ export class ReportsComponent implements OnInit {
         appliedPromotions: this.normalizeAppliedPromotions(p.order?.appliedPromotions)
       }));
 
-    this.buildPromotionReport(this.recentOrders);
-    this.calculateProductStats();
-    await this.loadExpenses();
-    this.calculateFinancialSummary();
+    if (!this.isBaristaView) {
+      this.buildPromotionReport(this.recentOrders);
+      this.calculateProductStats();
+      await this.loadExpenses();
+      this.calculateFinancialSummary();
+    }
   }
 
   private deduplicatePaymentsByOrder(payments: Payment[]): Payment[] {

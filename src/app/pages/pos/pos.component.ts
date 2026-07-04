@@ -80,7 +80,7 @@ import { buildApiUrl } from '../../core/config/server.config';
             <mat-icon>point_of_sale</mat-icon>
             <span>Caja</span>
           </button>
-          <button mat-menu-item (click)="goToReports()" *ngIf="isAdmin()">
+          <button mat-menu-item (click)="goToReports()" *ngIf="isAdminOrBarista()">
             <mat-icon>assessment</mat-icon>
             <span>Reportes</span>
           </button>
