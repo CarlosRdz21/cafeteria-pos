@@ -16,7 +16,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { DrinkBaseType, Product, ProductServiceTemperature, ProductVariantPricing, OrderItem, Order } from '../../core/models/domain.models';
+import { ProductDrinkBaseType as DrinkBaseType, Product, ProductServiceTemperature, ProductVariantPricing, OrderItem, Order } from '../../core/models/domain.models';
 import { OrderService } from '../../core/services/order.service';
 import { PendingOrdersService } from '../../core/services/pending-orders.service';
 import { CashRegisterService } from '../../core/services/cash-register.service';
@@ -1416,8 +1416,7 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   private hasDrinkBaseSelection(product: Product): boolean {
-    const drinkBaseType = this.normalizeDrinkBaseType(product.drinkBaseType);
-    return drinkBaseType === 'milk' || drinkBaseType === 'water';
+    return this.getDrinkBaseSelection(product.drinkBaseType) !== 'none';
   }
 
   private hasFlavorSelection(product: Product): boolean {
@@ -1430,9 +1429,24 @@ export class PosComponent implements OnInit, OnDestroy {
   }
 
   private normalizeDrinkBaseType(value: unknown): DrinkBaseType {
-    return value === 'milk' || value === 'water' || value === 'food'
-      ? value
+    return value === 'milk'
+      || value === 'water'
+      || value === 'both'
+      || value === 'food'
+      || value === 'combo'
+      || value === 'combo-milk'
+      || value === 'combo-water'
+      || value === 'combo-both'
+      ? value as DrinkBaseType
       : 'none';
+  }
+
+  private getDrinkBaseSelection(value: unknown): 'none' | 'milk' | 'water' | 'both' {
+    const type = this.normalizeDrinkBaseType(value);
+    if (type === 'milk' || type === 'combo-milk') return 'milk';
+    if (type === 'water' || type === 'combo-water') return 'water';
+    if (type === 'both' || type === 'combo-both') return 'both';
+    return 'none';
   }
 
   private normalizeServiceTemperature(value: unknown): ProductServiceTemperature {
@@ -1518,7 +1532,7 @@ type DrinkOptionsDialogData = {
       </ng-template>
 
       <ng-container *ngIf="drinkBaseType !== 'none' && drinkBaseOptions.length">
-        <div class="section-title">{{ drinkBaseType === 'milk' ? 'Tipo de leche' : 'Tipo de agua' }}</div>
+        <div class="section-title">{{ drinkBaseType === 'both' ? 'Tipo de leche o agua' : (drinkBaseType === 'milk' ? 'Tipo de leche' : 'Tipo de agua') }}</div>
         <div class="option-grid cols-fluid">
           <button
             mat-stroked-button
@@ -1779,7 +1793,7 @@ export class DrinkOptionsDialogComponent {
     ].includes(normalizedCategory);
     this.serviceTemperature = this.normalizeServiceTemperature(data.serviceTemperature);
     this.isColdOnly = this.serviceTemperature === 'cold-only';
-    this.drinkBaseType = this.normalizeDrinkBaseType(data.product.drinkBaseType);
+    this.drinkBaseType = this.getDrinkBaseSelection(data.product.drinkBaseType);
     this.drinkBaseOptions = this.getDrinkBaseOptions();
     this.drinkBaseOptionExtras = this.getDrinkBaseOptionExtras();
     this.drinkBaseOption = this.drinkBaseOptions[0] || '';
@@ -1890,9 +1904,24 @@ export class DrinkOptionsDialogComponent {
   }
 
   private normalizeDrinkBaseType(value: unknown): DrinkBaseType {
-    return value === 'milk' || value === 'water' || value === 'food'
-      ? value
+    return value === 'milk'
+      || value === 'water'
+      || value === 'both'
+      || value === 'food'
+      || value === 'combo'
+      || value === 'combo-milk'
+      || value === 'combo-water'
+      || value === 'combo-both'
+      ? value as DrinkBaseType
       : 'none';
+  }
+
+  private getDrinkBaseSelection(value: unknown): 'none' | 'milk' | 'water' | 'both' {
+    const type = this.normalizeDrinkBaseType(value);
+    if (type === 'milk' || type === 'combo-milk') return 'milk';
+    if (type === 'water' || type === 'combo-water') return 'water';
+    if (type === 'both' || type === 'combo-both') return 'both';
+    return 'none';
   }
 
   private normalizeServiceTemperature(value: unknown): ProductServiceTemperature {
@@ -1910,6 +1939,14 @@ export class DrinkOptionsDialogComponent {
       return productOptions.length ? productOptions : [...this.defaultWaterOptions];
     }
 
+    if (this.drinkBaseType === 'both') {
+      const milkOptions = this.normalizeOptionList(this.data.product.milkOptions);
+      const waterOptions = this.normalizeOptionList(this.data.product.waterOptions);
+      const milks = (milkOptions.length ? milkOptions : this.defaultMilkOptions).map(option => `milk:${option}`);
+      const waters = (waterOptions.length ? waterOptions : this.defaultWaterOptions).map(option => `water:${option}`);
+      return [...milks, ...waters];
+    }
+
     return [];
   }
 
@@ -1920,6 +1957,15 @@ export class DrinkOptionsDialogComponent {
 
     if (this.drinkBaseType === 'water') {
       return this.normalizeOptionExtras(this.data.product.waterOptionExtras);
+    }
+
+    if (this.drinkBaseType === 'both') {
+      const milkExtras = this.normalizeOptionExtras(this.data.product.milkOptionExtras);
+      const waterExtras = this.normalizeOptionExtras(this.data.product.waterOptionExtras);
+      return {
+        ...Object.fromEntries(Object.entries(milkExtras).map(([option, price]) => [`milk:${option}`, price])),
+        ...Object.fromEntries(Object.entries(waterExtras).map(([option, price]) => [`water:${option}`, price]))
+      };
     }
 
     return {};
@@ -2029,7 +2075,8 @@ export class DrinkOptionsDialogComponent {
 
   getDrinkBaseOptionLabel(option: string): string {
     const extra = this.getDrinkBaseOptionExtra(option);
-    return extra > 0 ? `${option} (+$${extra.toFixed(2)})` : option;
+    const displayOption = this.getDrinkBaseOptionDisplayName(option);
+    return extra > 0 ? `${displayOption} (+$${extra.toFixed(2)})` : displayOption;
   }
 
   getFlavorOptionExtra(option: string): number {
@@ -2052,9 +2099,23 @@ export class DrinkOptionsDialogComponent {
 
   private getDrinkBaseNameSuffix(): string {
     if (!this.drinkBaseOption || this.drinkBaseType === 'none') return '';
+    if (this.drinkBaseType === 'both') {
+      const [base, ...nameParts] = this.drinkBaseOption.split(':');
+      const optionName = nameParts.join(':');
+      return base === 'water'
+        ? ` - Agua ${optionName}`
+        : ` - Leche ${optionName}`;
+    }
     return this.drinkBaseType === 'milk'
       ? ` - Leche ${this.drinkBaseOption}`
       : ` - Agua ${this.drinkBaseOption}`;
+  }
+
+  private getDrinkBaseOptionDisplayName(option: string): string {
+    if (this.drinkBaseType !== 'both') return option;
+    const [base, ...nameParts] = option.split(':');
+    const optionName = nameParts.join(':');
+    return base === 'water' ? `Agua ${optionName}` : `Leche ${optionName}`;
   }
 
   private getFlavorNameSuffix(): string {

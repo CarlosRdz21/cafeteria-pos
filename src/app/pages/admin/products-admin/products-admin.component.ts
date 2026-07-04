@@ -15,12 +15,13 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom } from 'rxjs';
-import { DrinkBaseType, Product, ProductCategory, ProductServiceTemperature, ProductVariantPricing } from '../../../core/models/domain.models';
+import { ProductDrinkBaseType as DrinkBaseType, Product, ProductCategory, ProductServiceTemperature, ProductVariantPricing } from '../../../core/models/domain.models';
 import { buildApiUrl } from '../../../core/config/server.config';
 import { UiDialogService } from '../../../core/services/ui-dialog.service';
 import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-number.directive';
 
-type AdminProductKind = 'drink' | 'food';
+type AdminProductKind = 'drink' | 'food' | 'combo';
+type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
 
 @Component({
   selector: 'app-products-admin',
@@ -59,6 +60,15 @@ type AdminProductKind = 'drink' | 'food';
           <mat-label>Buscar producto</mat-label>
           <input matInput [(ngModel)]="searchTerm" placeholder="Nombre o descripción">
           <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="category-filter">
+          <mat-label>Categoría</mat-label>
+          <mat-select [(ngModel)]="selectedCategoryFilter">
+            <mat-option value="all">Todas</mat-option>
+            <mat-option *ngFor="let category of productCategoryRows" [value]="category.id">
+              {{ category.name }}
+            </mat-option>
+          </mat-select>
         </mat-form-field>
       </div>
 
@@ -101,6 +111,7 @@ type AdminProductKind = 'drink' | 'food';
               >
                 <mat-option value="drink">Bebida</mat-option>
                 <mat-option value="food">Alimento</mat-option>
+                <mat-option value="combo">Alimento y bebida</mat-option>
               </mat-select>
             </mat-form-field>
 
@@ -113,12 +124,13 @@ type AdminProductKind = 'drink' | 'food';
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Base</mat-label>
                 <mat-select
-                  [(ngModel)]="editingProduct.drinkBaseType"
-                  (selectionChange)="onDrinkBaseTypeChange()"
+                  [ngModel]="getDrinkBaseSelection(editingProduct)"
+                  (ngModelChange)="onDrinkBaseTypeChange($event)"
                 >
                   <mat-option value="none">No aplica</mat-option>
                   <mat-option value="milk">Con leche</mat-option>
                   <mat-option value="water">Con agua</mat-option>
+                  <mat-option value="both">Leche y agua</mat-option>
                 </mat-select>
               </mat-form-field>
 
@@ -133,17 +145,17 @@ type AdminProductKind = 'drink' | 'food';
                 </mat-select>
               </mat-form-field>
 
-              <ng-container *ngIf="editingProduct.drinkBaseType !== 'none'">
+              <ng-container *ngIf="usesMilkBase(editingProduct)">
                 <div class="drink-base-options-header">
-                  <span>{{ editingProduct.drinkBaseType === 'milk' ? 'Tipos de leche' : 'Tipos de agua' }}</span>
-                  <button mat-stroked-button type="button" (click)="addDrinkBaseOption()">
+                  <span>Tipos de leche</span>
+                  <button mat-stroked-button type="button" (click)="addDrinkBaseOption('milk')">
                     <mat-icon>add</mat-icon>
-                    Agregar opción
+                    Agregar leche
                   </button>
                 </div>
 
-                <div class="drink-base-options" *ngIf="currentDrinkBaseOptions.length > 0; else emptyOptions">
-                  <div class="option-row" *ngFor="let option of currentDrinkBaseOptions">
+                <div class="drink-base-options" *ngIf="currentMilkOptions.length > 0; else emptyMilkOptions">
+                  <div class="option-row" *ngFor="let option of currentMilkOptions">
                     <span class="option-name">{{ option }}</span>
 
                     <mat-form-field appearance="outline" class="option-extra-field">
@@ -154,8 +166,8 @@ type AdminProductKind = 'drink' | 'food';
                         appBlankZero
                         step="0.01"
                         min="0"
-                        [ngModel]="getDrinkBaseExtraValue(option)"
-                        (ngModelChange)="setDrinkBaseExtraValue(option, $event)"
+                        [ngModel]="getDrinkBaseExtraValue('milk', option)"
+                        (ngModelChange)="setDrinkBaseExtraValue('milk', option, $event)"
                       >
                       <span matPrefix>$&nbsp;</span>
                     </mat-form-field>
@@ -164,14 +176,49 @@ type AdminProductKind = 'drink' | 'food';
                       mat-icon-button
                       type="button"
                       aria-label="Eliminar opción"
-                      (click)="removeDrinkBaseOption(option)"
+                      (click)="removeDrinkBaseOption('milk', option)"
                     >
                       <mat-icon>close</mat-icon>
                     </button>
                   </div>
                 </div>
-                <ng-template #emptyOptions>
-                  <p class="empty-options-text">No hay opciones configuradas</p>
+                <ng-template #emptyMilkOptions>
+                  <p class="empty-options-text">No hay tipos de leche configurados</p>
+                </ng-template>
+              </ng-container>
+
+              <ng-container *ngIf="usesWaterBase(editingProduct)">
+                <div class="drink-base-options-header">
+                  <span>Tipos de agua</span>
+                  <button mat-stroked-button type="button" (click)="addDrinkBaseOption('water')">
+                    <mat-icon>add</mat-icon>
+                    Agregar agua
+                  </button>
+                </div>
+
+                <div class="drink-base-options" *ngIf="currentWaterOptions.length > 0; else emptyWaterOptions">
+                  <div class="option-row" *ngFor="let option of currentWaterOptions">
+                    <span class="option-name">{{ option }}</span>
+                    <mat-form-field appearance="outline" class="option-extra-field">
+                      <mat-label>Extra (+)</mat-label>
+                      <input
+                        matInput
+                        type="number"
+                        appBlankZero
+                        step="0.01"
+                        min="0"
+                        [ngModel]="getDrinkBaseExtraValue('water', option)"
+                        (ngModelChange)="setDrinkBaseExtraValue('water', option, $event)"
+                      >
+                      <span matPrefix>$&nbsp;</span>
+                    </mat-form-field>
+                    <button mat-icon-button type="button" aria-label="Eliminar opción" (click)="removeDrinkBaseOption('water', option)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </div>
+                </div>
+                <ng-template #emptyWaterOptions>
+                  <p class="empty-options-text">No hay tipos de agua configurados</p>
                 </ng-template>
               </ng-container>
             </div>
@@ -300,7 +347,7 @@ type AdminProductKind = 'drink' | 'food';
 
             <div class="drink-base-card full-width" *ngIf="editingProduct">
               <div class="drink-base-header">
-                <h3>{{ isFoodProduct(editingProduct) ? 'Personalización de alimento' : 'Ingredientes de bebida' }}</h3>
+                <h3>{{ isComboProduct(editingProduct) ? 'Personalización del combo' : (isFoodProduct(editingProduct) ? 'Personalización de alimento' : 'Ingredientes de bebida') }}</h3>
                 <p>Configura ingredientes que el cliente puede quitar y extras que sí se cobran</p>
               </div>
 
@@ -453,8 +500,9 @@ type AdminProductKind = 'drink' | 'food';
                 <span class="price">\${{product.price}}</span>
                 <span class="category">{{getProductCategoryName(product)}}</span>
                 <span class="base-chip food" *ngIf="isFoodProduct(product)">Alimento</span>
-                <span class="base-chip" *ngIf="product.drinkBaseType === 'milk'">Con leche</span>
-                <span class="base-chip water" *ngIf="product.drinkBaseType === 'water'">Con agua</span>
+                <span class="base-chip food" *ngIf="isComboProduct(product)">Alimento y bebida</span>
+                <span class="base-chip" *ngIf="usesMilkBase(product)">Con leche</span>
+                <span class="base-chip water" *ngIf="usesWaterBase(product)">Con agua</span>
                 <span class="base-chip" *ngIf="product.allowFlavorSelection">Con sabor</span>
                 <span class="stock">Stock: {{product.stock}}</span>
                 <span class="status" [class.available]="product.available" [class.unavailable]="!product.available">
@@ -514,11 +562,20 @@ type AdminProductKind = 'drink' | 'food';
       padding: 16px 20px 12px;
       background: #fafafa;
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
     }
 
     .search-field {
       width: 100%;
       max-width: 440px;
+      padding-top: 10px;
+    }
+
+    .category-filter {
+      width: min(280px, 100%);
+      padding-top: 10px;
     }
 
     .form-grid {
@@ -828,13 +885,21 @@ type AdminProductKind = 'drink' | 'food';
     }
     @media (max-width: 768px) {
       .admin-container {
-        padding: 136px 12px 12px;
+        padding: 220px 12px 12px;
       }
 
       .search-row {
         top: 56px;
         width: calc(100vw - 24px);
         padding: 12px 12px 10px;
+        flex-direction: column;
+      }
+
+      .search-field,
+      .category-filter {
+        max-width: none;
+        width: 100%;
+        padding-top: 10px;
       }
 
       .product-content {
@@ -875,6 +940,7 @@ export class ProductsAdminComponent implements OnInit {
   editingProduct: Product | null = null;
   imageFileName: string = '';
   searchTerm = '';
+  selectedCategoryFilter: 'all' | number = 'all';
   productCategoryRows: ProductCategory[] = [];
   productCategories: string[] = [];
   private productDialogRef: MatDialogRef<unknown> | null = null;
@@ -951,14 +1017,14 @@ try {
 
   get filteredProductsList(): Product[] {
     const term = this.searchTerm.trim().toLowerCase();
-    if (!term) {
-      return this.products;
-    }
-
-    return this.products.filter(product =>
-      product.name.toLowerCase().includes(term)
-      || (product.description || '').toLowerCase().includes(term)
-    );
+    return this.products.filter(product => {
+      const matchesCategory = this.selectedCategoryFilter === 'all'
+        || product.categoryId === this.selectedCategoryFilter;
+      const matchesSearch = !term
+        || product.name.toLowerCase().includes(term)
+        || (product.description || '').toLowerCase().includes(term);
+      return matchesCategory && matchesSearch;
+    });
   }
 
   addNewProduct() {
@@ -1055,7 +1121,7 @@ try {
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'environment'; // Usar cÃ¡mara trasera
-    
+
     input.onchange = async (event: any) => {
       const file = event.target.files[0];
       if (file) {
@@ -1074,7 +1140,7 @@ try {
         }
       }
     };
-    
+
     input.click();
   }
 
@@ -1253,7 +1319,7 @@ try {
 
     const confirmed = await this.uiDialog.confirm({
       title: 'Eliminar producto',
-      message: `¿Estás seguro de eliminar ${product.name}?`, 
+      message: `¿Estás seguro de eliminar ${product.name}?`,
       confirmText: 'Eliminar'
     });
     if (!confirmed) {
@@ -1390,11 +1456,12 @@ try {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  get currentDrinkBaseOptions(): string[] {
-    if (!this.editingProduct) return [];
-    return this.editingProduct.drinkBaseType === 'water'
-      ? (this.editingProduct.waterOptions || [])
-      : (this.editingProduct.milkOptions || []);
+  get currentMilkOptions(): string[] {
+    return this.editingProduct?.milkOptions || [];
+  }
+
+  get currentWaterOptions(): string[] {
+    return this.editingProduct?.waterOptions || [];
   }
 
   get currentFlavorOptions(): string[] {
@@ -1413,22 +1480,48 @@ try {
   }
 
   getProductKind(product: Product | null | undefined): AdminProductKind {
-    return product?.drinkBaseType === 'food' ? 'food' : 'drink';
+    const type = this.normalizeDrinkBaseType(product?.drinkBaseType);
+    if (type === 'food') return 'food';
+    return type.startsWith('combo') ? 'combo' : 'drink';
   }
 
   isFoodProduct(product: Product | null | undefined): boolean {
-    return product?.drinkBaseType === 'food';
+    return this.getProductKind(product) === 'food';
   }
 
   isDrinkProduct(product: Product | null | undefined): boolean {
-    return !!product && product.drinkBaseType !== 'food';
+    return !!product && this.getProductKind(product) !== 'food';
+  }
+
+  isComboProduct(product: Product | null | undefined): boolean {
+    return !!product && this.getProductKind(product) === 'combo';
+  }
+
+  getDrinkBaseSelection(product: Product | null | undefined): DrinkBaseSelection {
+    const type = this.normalizeDrinkBaseType(product?.drinkBaseType);
+    if (type === 'milk' || type === 'combo-milk') return 'milk';
+    if (type === 'water' || type === 'combo-water') return 'water';
+    if (type === 'both' || type === 'combo-both') return 'both';
+    return 'none';
+  }
+
+  usesMilkBase(product: Product | null | undefined): boolean {
+    const base = this.getDrinkBaseSelection(product);
+    return base === 'milk' || base === 'both';
+  }
+
+  usesWaterBase(product: Product | null | undefined): boolean {
+    const base = this.getDrinkBaseSelection(product);
+    return base === 'water' || base === 'both';
   }
 
   onProductKindChange(kind: AdminProductKind) {
     if (!this.editingProduct) return;
 
+    const currentBase = this.getDrinkBaseSelection(this.editingProduct);
+
     if (kind === 'food') {
-      this.editingProduct.drinkBaseType = 'food' as DrinkBaseType;
+      this.editingProduct.drinkBaseType = 'food';
       this.editingProduct.serviceTemperature = 'default';
       this.editingProduct.allowFlavorSelection = false;
       this.editingProduct.milkOptions = [];
@@ -1449,8 +1542,8 @@ try {
       return;
     }
 
-    if (this.editingProduct.drinkBaseType === 'food') {
-      this.editingProduct.drinkBaseType = 'none';
+    this.editingProduct.drinkBaseType = this.composeDrinkBaseType(kind, currentBase);
+    if (currentBase === 'none') {
       this.editingProduct.serviceTemperature = 'default';
       this.editingProduct.variantPricing = { ...this.defaultVariantPricing };
     }
@@ -1461,9 +1554,9 @@ try {
     this.ensureIngredientCustomizationOptions(this.editingProduct);
   }
 
-  onDrinkBaseTypeChange() {
+  onDrinkBaseTypeChange(base: DrinkBaseSelection) {
     if (!this.editingProduct) return;
-    this.editingProduct.drinkBaseType = this.normalizeDrinkBaseType(this.editingProduct.drinkBaseType);
+    this.editingProduct.drinkBaseType = this.composeDrinkBaseType(this.getProductKind(this.editingProduct), base);
     this.ensureDrinkBaseOptions(this.editingProduct);
   }
 
@@ -1479,10 +1572,10 @@ try {
     this.ensureFlavorOptions(this.editingProduct);
   }
 
-  async addDrinkBaseOption() {
-    if (!this.editingProduct || this.editingProduct.drinkBaseType === 'none') return;
+  async addDrinkBaseOption(base: 'milk' | 'water') {
+    if (!this.editingProduct) return;
 
-    const label = this.editingProduct.drinkBaseType === 'milk' ? 'tipo de leche' : 'tipo de agua';
+    const label = base === 'milk' ? 'tipo de leche' : 'tipo de agua';
     const option = this.normalizeOptionValue(await this.uiDialog.prompt({
       title: 'Nueva opción',
       message: `Escribe el ${label}`,
@@ -1492,20 +1585,20 @@ try {
     }));
     if (!option) return;
 
-    const list = this.currentDrinkBaseOptions;
+    const list = base === 'milk' ? this.currentMilkOptions : this.currentWaterOptions;
     if (list.some(v => v.toLowerCase() === option.toLowerCase())) {
       this.snackBar.open('Esa opción ya existe', 'Cerrar', { duration: 2200 });
       return;
     }
 
     list.push(option);
-    this.setDrinkBaseExtraValue(option, 0);
+    this.setDrinkBaseExtraValue(base, option, 0);
   }
 
-  removeDrinkBaseOption(option: string) {
-    if (!this.editingProduct || this.editingProduct.drinkBaseType === 'none') return;
+  removeDrinkBaseOption(base: 'milk' | 'water', option: string) {
+    if (!this.editingProduct) return;
     const key = option.toLowerCase();
-    if (this.editingProduct.drinkBaseType === 'water') {
+    if (base === 'water') {
       this.editingProduct.waterOptions = (this.editingProduct.waterOptions || []).filter(v => v.toLowerCase() !== key);
       const map = this.editingProduct.waterOptionExtras || {};
       for (const mapKey of Object.keys(map)) {
@@ -1524,9 +1617,9 @@ try {
     }
   }
 
-  getDrinkBaseExtraValue(option: string): number {
+  getDrinkBaseExtraValue(base: 'milk' | 'water', option: string): number {
     if (!this.editingProduct) return 0;
-    const map = this.getCurrentDrinkBaseExtraMap();
+    const map = this.getDrinkBaseExtraMap(base);
     const fromExact = map[option];
     if (typeof fromExact === 'number' && Number.isFinite(fromExact)) {
       return fromExact;
@@ -1536,9 +1629,9 @@ try {
     return this.toNumber(entry[1]);
   }
 
-  setDrinkBaseExtraValue(option: string, value: unknown): void {
-    if (!this.editingProduct || this.editingProduct.drinkBaseType === 'none') return;
-    const map = this.getCurrentDrinkBaseExtraMap();
+  setDrinkBaseExtraValue(base: 'milk' | 'water', option: string, value: unknown): void {
+    if (!this.editingProduct) return;
+    const map = this.getDrinkBaseExtraMap(base);
     const normalized = Math.max(0, this.toNumber(value));
     const existingKey = Object.keys(map).find(key => key.toLowerCase() === option.toLowerCase()) || option;
     map[existingKey] = normalized;
@@ -1671,9 +1764,24 @@ try {
   }
 
   private normalizeDrinkBaseType(value: unknown): DrinkBaseType {
-    return value === 'milk' || value === 'water' || value === 'food'
+    return value === 'milk'
+      || value === 'water'
+      || value === 'both'
+      || value === 'food'
+      || value === 'combo'
+      || value === 'combo-milk'
+      || value === 'combo-water'
+      || value === 'combo-both'
       ? (value as DrinkBaseType)
       : 'none';
+  }
+
+  private composeDrinkBaseType(kind: AdminProductKind, base: DrinkBaseSelection): DrinkBaseType {
+    if (kind === 'food') return 'food';
+    if (kind === 'combo') {
+      return base === 'none' ? 'combo' : `combo-${base}` as DrinkBaseType;
+    }
+    return base;
   }
 
   private normalizeServiceTemperature(value: unknown): ProductServiceTemperature {
@@ -1716,6 +1824,7 @@ try {
     const type = this.normalizeDrinkBaseType(product.drinkBaseType);
     product.drinkBaseType = type;
     product.serviceTemperature = this.normalizeServiceTemperature(product.serviceTemperature);
+    const base = this.getDrinkBaseSelection(product);
 
     if (type === 'food') {
       product.milkOptions = [];
@@ -1725,28 +1834,23 @@ try {
       return;
     }
 
-    if (type === 'milk') {
+    if (base === 'milk' || base === 'both') {
       const normalized = this.normalizeOptionList(product.milkOptions);
       product.milkOptions = normalized.length ? normalized : [...this.defaultMilkOptions];
       product.milkOptionExtras = this.ensureOptionExtrasForList(product.milkOptions, product.milkOptionExtras);
-      product.waterOptions = [];
-      product.waterOptionExtras = {};
-      return;
+    } else {
+      product.milkOptions = [];
+      product.milkOptionExtras = {};
     }
 
-    if (type === 'water') {
+    if (base === 'water' || base === 'both') {
       const normalized = this.normalizeOptionList(product.waterOptions);
       product.waterOptions = normalized.length ? normalized : [...this.defaultWaterOptions];
       product.waterOptionExtras = this.ensureOptionExtrasForList(product.waterOptions, product.waterOptionExtras);
-      product.milkOptions = [];
-      product.milkOptionExtras = {};
-      return;
+    } else {
+      product.waterOptions = [];
+      product.waterOptionExtras = {};
     }
-
-    product.milkOptions = [];
-    product.waterOptions = [];
-    product.milkOptionExtras = {};
-    product.waterOptionExtras = {};
   }
 
   private ensureFlavorOptions(product: Product): void {
@@ -1799,9 +1903,9 @@ try {
     }
   }
 
-  private getCurrentDrinkBaseExtraMap(): Record<string, number> {
+  private getDrinkBaseExtraMap(base: 'milk' | 'water'): Record<string, number> {
     if (!this.editingProduct) return {};
-    if (this.editingProduct.drinkBaseType === 'water') {
+    if (base === 'water') {
       if (!this.editingProduct.waterOptionExtras) this.editingProduct.waterOptionExtras = {};
       return this.editingProduct.waterOptionExtras;
     }
@@ -1832,7 +1936,7 @@ try {
     return out;
   }
   private async fetchProductCategories(): Promise<ProductCategory[]> {
-    
+
 
     try {
       const rows = await firstValueFrom(this.http.get<any[]>(buildApiUrl('product-categories')));

@@ -1,5 +1,12 @@
 ﻿export type DrinkBaseType = 'none' | 'milk' | 'water' | 'food';
 export type ProductServiceTemperature = 'default' | 'cold-only';
+export type ProductDrinkBaseType =
+  | DrinkBaseType
+  | 'both'
+  | 'combo'
+  | 'combo-milk'
+  | 'combo-water'
+  | 'combo-both';
 
 export interface ProductVariantPricing {
   hot12OzExtra?: number;
@@ -22,7 +29,7 @@ export interface Product {
   available: boolean;
   stock?: number;
   variantPricing?: ProductVariantPricing;
-  drinkBaseType?: DrinkBaseType;
+  drinkBaseType?: ProductDrinkBaseType;
   milkOptions?: string[];
   waterOptions?: string[];
   milkOptionExtras?: Record<string, number>;
