@@ -14,6 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { OrderService } from '../../core/services/order.service';
 import { AppliedPromotionSummary, Expense, Order, Product, ProductCategory } from '../../core/models/domain.models';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -101,7 +102,8 @@ interface FinancialSummary {
     MatInputModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatSelectModule
+    MatSelectModule,
+    MatSnackBarModule
   ],
   template: `
     <mat-toolbar color="primary">
@@ -486,14 +488,27 @@ interface FinancialSummary {
                         <span class="sale-id">#{{order.id}}</span>
                         <span class="sale-date">{{formatDate(order.createdAt)}}</span>
                       </div>
-                      <span 
-                        class="payment-method"
-                        [class.cash]="order.paymentMethod === 'cash'"
-                        [class.card]="order.paymentMethod === 'card'"
-                      >
-                        <mat-icon>{{order.paymentMethod === 'cash' ? 'payments' : 'credit_card'}}</mat-icon>
-                        {{order.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'}}
-                      </span>
+                      <div class="sale-actions">
+                        <span 
+                          class="payment-method"
+                          [class.cash]="order.paymentMethod === 'cash'"
+                          [class.card]="order.paymentMethod === 'card'"
+                        >
+                          <mat-icon>{{order.paymentMethod === 'cash' ? 'payments' : 'credit_card'}}</mat-icon>
+                          {{order.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'}}
+                        </span>
+                        <button
+                          *ngIf="isAdminView"
+                          mat-icon-button
+                          color="warn"
+                          type="button"
+                          [disabled]="isDeletingOrder(order)"
+                          aria-label="Eliminar venta"
+                          (click)="deleteSale(order)"
+                        >
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
                     </div>
 
                     <div class="sale-promo" *ngIf="hasPromotion(order)">
@@ -620,6 +635,23 @@ interface FinancialSummary {
                   <ng-container matColumnDef="notes">
                     <th mat-header-cell *matHeaderCellDef>Notas</th>
                     <td mat-cell *matCellDef="let element">{{element.notes || '-'}}</td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef></th>
+                    <td mat-cell *matCellDef="let element" class="expense-actions">
+                      <button
+                        *ngIf="isAdminView"
+                        mat-icon-button
+                        color="warn"
+                        type="button"
+                        [disabled]="isDeletingExpense(element)"
+                        aria-label="Eliminar gasto"
+                        (click)="deleteExpense(element)"
+                      >
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
                   </ng-container>
 
                   <tr mat-header-row *matHeaderRowDef="expenseColumns"></tr>
@@ -1163,6 +1195,14 @@ interface FinancialSummary {
       height: 16px;
     }
 
+    .sale-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
     .sale-promo {
       display: flex;
       align-items: center;
@@ -1341,6 +1381,11 @@ interface FinancialSummary {
       font-weight: 600;
     }
 
+    .expense-actions {
+      width: 56px;
+      text-align: right;
+    }
+
     .expenses-table {
       width: 100%;
       margin-bottom: 16px;
@@ -1481,6 +1526,7 @@ interface FinancialSummary {
 
 export class ReportsComponent implements OnInit {
   isBaristaView = false;
+  isAdminView = false;
   selectedPeriod = 'today';
   startDate: Date = new Date();
   endDate: Date = new Date();
@@ -1519,6 +1565,8 @@ export class ReportsComponent implements OnInit {
 
   displayedColumns: string[] = ['rank', 'product', 'quantity', 'total'];
   expenseColumns: string[] = ['date', 'concept', 'category', 'user', 'amount', 'notes'];
+  private deletingOrderIds = new Set<number>();
+  private deletingExpenseIds = new Set<number>();
 
   constructor(
     private orderService: OrderService,
@@ -1526,11 +1574,17 @@ export class ReportsComponent implements OnInit {
     private http: HttpClient,
     private expenseService: ExpenseService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) {}
 
   async ngOnInit() {
     this.isBaristaView = this.authService.hasRole('barista');
+    this.isAdminView = this.authService.isAdmin();
+    this.expenseColumns = this.isAdminView
+      ? ['date', 'concept', 'category', 'user', 'amount', 'notes', 'actions']
+      : ['date', 'concept', 'category', 'user', 'amount', 'notes'];
+
     if (!this.isBaristaView) {
       await this.loadProducts();
     }
@@ -1783,6 +1837,57 @@ export class ReportsComponent implements OnInit {
 
     this.expenseTotal = this.expenses.reduce((sum, e) => sum + e.amount, 0);
     this.calculateExpenseCategoryTotals();
+  }
+
+  isDeletingOrder(order: Order): boolean {
+    const id = Number(order.id || 0);
+    return id > 0 && this.deletingOrderIds.has(id);
+  }
+
+  isDeletingExpense(expense: Expense): boolean {
+    const id = Number(expense.id || 0);
+    return id > 0 && this.deletingExpenseIds.has(id);
+  }
+
+  async deleteSale(order: Order) {
+    const id = Number(order.id || 0);
+    if (!this.isAdminView || !id || this.deletingOrderIds.has(id)) return;
+
+    const confirmed = window.confirm(`Eliminar la venta #${id}? Esta accion quitara la venta del reporte.`);
+    if (!confirmed) return;
+
+    this.deletingOrderIds.add(id);
+    try {
+      await this.orderService.deleteOrder(id);
+      this.snackBar.open('Venta eliminada', 'Cerrar', { duration: 2500 });
+      await this.loadReports();
+    } catch (error) {
+      console.error('Error al eliminar venta:', error);
+      this.snackBar.open('No se pudo eliminar la venta', 'Cerrar', { duration: 3500 });
+    } finally {
+      this.deletingOrderIds.delete(id);
+    }
+  }
+
+  async deleteExpense(expense: Expense) {
+    const id = Number(expense.id || 0);
+    if (!this.isAdminView || !id || this.deletingExpenseIds.has(id)) return;
+
+    const label = expense.concept || expense.description || `gasto #${id}`;
+    const confirmed = window.confirm(`Eliminar "${label}" por $${Number(expense.amount || 0).toFixed(2)}?`);
+    if (!confirmed) return;
+
+    this.deletingExpenseIds.add(id);
+    try {
+      await this.expenseService.delete(id);
+      this.snackBar.open('Gasto eliminado', 'Cerrar', { duration: 2500 });
+      await this.loadReports();
+    } catch (error) {
+      console.error('Error al eliminar gasto:', error);
+      this.snackBar.open('No se pudo eliminar el gasto', 'Cerrar', { duration: 3500 });
+    } finally {
+      this.deletingExpenseIds.delete(id);
+    }
   }
 
   calculateFinancialSummary() {

@@ -32,6 +32,9 @@ export class ExpenseService {
       timestamp: created?.timestamp ? new Date(created.timestamp) : new Date()
     };
   }
-}
 
+  async delete(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete(`${this.api}/${id}`));
+  }
+}
 

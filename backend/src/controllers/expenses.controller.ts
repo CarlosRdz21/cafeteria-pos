@@ -91,4 +91,47 @@ export class ExpensesController {
       res.status(500).json({ error: error?.message || 'Error creating expense' });
     }
   }
+
+  static async remove(req: Request, res: Response) {
+    try {
+      const id = toNumber(req.params.id, 0);
+      if (!id) {
+        return res.status(400).json({ error: 'Invalid expense id' });
+      }
+
+      const deleted = await db.$transaction(async (tx: any) => {
+        const expense = await tx.expense.findUnique({ where: { id } });
+        if (!expense) {
+          return null;
+        }
+
+        await tx.expense.delete({ where: { id } });
+
+        if (expense.paidFromCashRegister && expense.cashRegisterId) {
+          const register = await tx.cashRegister.findUnique({
+            where: { id: expense.cashRegisterId }
+          });
+
+          if (register) {
+            await tx.cashRegister.update({
+              where: { id: expense.cashRegisterId },
+              data: {
+                expenses: Math.max(0, toNumber(register.expenses) - toNumber(expense.amount))
+              }
+            });
+          }
+        }
+
+        return expense;
+      });
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Gasto no encontrado' });
+      }
+
+      res.json(deleted);
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || 'Error deleting expense' });
+    }
+  }
 }

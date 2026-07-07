@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { AppliedPromotionSummary, Order, OrderItem, Product } from '../models/domain.models';
 import { buildApiUrl } from '../config/server.config';
@@ -130,6 +130,10 @@ export class OrderService {
       params: { status: 'completed' }
     }).toPromise();
     return (rows || []).slice(0, limit);
+  }
+
+  async deleteOrder(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete(buildApiUrl('orders/' + id)));
   }
 
   async getOrdersByDateRange(startDate: Date, endDate: Date): Promise<Order[]> {

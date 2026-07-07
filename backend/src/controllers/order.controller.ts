@@ -394,6 +394,77 @@ export class OrderController {
     }
   }
 
+  static async remove(req: Request, res: Response) {
+    try {
+      const orderId = Number(req.params.id);
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'Invalid order id' });
+      }
+
+      const deletedOrder = await prisma.$transaction(async tx => {
+        const order = await tx.order.findUnique({
+          where: { id: orderId },
+          include: {
+            items: true,
+            payments: {
+              orderBy: { paidAt: 'asc' }
+            }
+          }
+        });
+
+        if (!order) {
+          return null;
+        }
+
+        const payment = order.payments[0];
+        const paymentMethod = (payment?.method || order.paymentMethod) as 'cash' | 'card' | undefined;
+        const saleAmount = Number(order.total || payment?.amount || 0);
+        const paidAt = payment?.paidAt || order.createdAt;
+
+        if (order.status === 'completed' && paymentMethod && saleAmount > 0) {
+          const openRegister = await tx.cashRegister.findFirst({
+            where: {
+              status: 'open',
+              openedAt: { lte: paidAt }
+            },
+            orderBy: { openedAt: 'desc' }
+          });
+
+          if (openRegister) {
+            await tx.cashRegister.update({
+              where: { id: openRegister.id },
+              data: {
+                totalTransactions: Math.max(0, Number(openRegister.totalTransactions || 0) - 1),
+                ...(paymentMethod === 'cash'
+                  ? { cashSales: Math.max(0, Number(openRegister.cashSales || 0) - saleAmount) }
+                  : { cardSales: Math.max(0, Number(openRegister.cardSales || 0) - saleAmount) })
+              }
+            });
+          }
+        }
+
+        await tx.order.delete({ where: { id: orderId } });
+
+        return order;
+      });
+
+      if (!deletedOrder) {
+        return res.status(404).json({ error: 'Orden no encontrada' });
+      }
+
+      const io = getIO();
+      io.to('baristas').emit('order-cancelled', deletedOrder.id);
+      io.to('waiters').emit('order-updated', { ...deletedOrder, status: 'deleted' });
+      io.to('admins').emit('order-updated', { ...deletedOrder, status: 'deleted' });
+
+      res.json(deletedOrder);
+    } catch (error: any) {
+      console.error('âŒ Error deleting order:', error);
+      res.status(500).json({ error: error.message || 'Error deleting order' });
+    }
+  }
+
   static async getById(req: Request, res: Response) {
     try {
       const orderId = Number(req.params.id);
