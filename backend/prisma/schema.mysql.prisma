@@ -8,61 +8,61 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  username  String    @unique
-  email     String?   @unique
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String?  @unique
   password  String
   name      String
   role      String
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now())
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   expenses        Expense[]
   supplyMovements SupplyMovement[]
 }
 
 model ProductCategory {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  active    Boolean   @default(true)
-  sortOrder Int       @default(0)
-  createdAt DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 
-  products   Product[]
+  products Product[]
 }
 
 model SupplyCategory {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  active    Boolean   @default(true)
-  sortOrder Int       @default(0)
-  createdAt DateTime  @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
 
   supplies ProductSupply[]
 }
 
 model Product {
-  id           Int             @id @default(autoincrement())
-  name         String
-  description  String          @db.Text
-  price        Float
-  image        String          @db.LongText
-  categoryId   Int
-  categoryName String
-  available    Boolean         @default(true)
-  stock        Int?
-  variantPricing Json?
-  drinkBaseType String?
-  milkOptions   Json?
-  waterOptions  Json?
-  milkOptionExtras Json?
-  waterOptionExtras Json?
-  allowFlavorSelection Boolean @default(false)
-  flavorOptions   Json?
-  flavorOptionExtras Json?
-  serviceTemperature String?
-  removableIngredients Json?
-  extraIngredients Json?
+  id                    Int                       @id @default(autoincrement())
+  name                  String
+  description           String                    @db.Text
+  price                 Float
+  image                 String                    @db.LongText
+  categoryId            Int
+  categoryName          String
+  available             Boolean                   @default(true)
+  stock                 Int?
+  variantPricing        Json?
+  drinkBaseType         String?
+  milkOptions           Json?
+  waterOptions          Json?
+  milkOptionExtras      Json?
+  waterOptionExtras     Json?
+  allowFlavorSelection  Boolean                   @default(false)
+  flavorOptions         Json?
+  flavorOptionExtras    Json?
+  serviceTemperature    String?
+  removableIngredients  Json?
+  extraIngredients      Json?
   extraIngredientPrices Json?
 
   category ProductCategory @relation(fields: [categoryId], references: [id], onUpdate: Cascade, onDelete: Restrict)
@@ -72,7 +72,7 @@ model Product {
 }
 
 model ProductSupply {
-  id           Int            @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   name         String
   categoryId   Int
   categoryName String
@@ -80,11 +80,11 @@ model ProductSupply {
   currentStock Float
   unitCost     Float?
   minStock     Float?
-  notes        String?        @db.Text
-  active       Boolean        @default(true)
-  createdAt    DateTime       @default(now())
+  notes        String?  @db.Text
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
 
-  category SupplyCategory @relation(fields: [categoryId], references: [id], onUpdate: Cascade, onDelete: Restrict)
+  category  SupplyCategory  @relation(fields: [categoryId], references: [id], onUpdate: Cascade, onDelete: Restrict)
   movements SupplyMovement[]
 
   @@index([categoryId])
@@ -92,35 +92,35 @@ model ProductSupply {
 }
 
 model Order {
-  id           Int        @id @default(autoincrement())
-  status       String
-  subtotal     Float
-  tax          Float
-  total        Float
-  discountTotal Float @default(0)
+  id                Int      @id @default(autoincrement())
+  status            String
+  subtotal          Float
+  tax               Float
+  total             Float
+  discountTotal     Float    @default(0)
   appliedPromotions Json?
-  tableNumber  String?
-  customerName String?
-  notes        String?    @db.Text
-  createdAt    DateTime   @default(now())
-  paymentMethod String?
-  amountPaid   Float?
-  change       Float?
+  tableNumber       String?
+  customerName      String?
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now())
+  paymentMethod     String?
+  amountPaid        Float?
+  change            Float?
 
-  items        OrderItem[]
-  payments     Payment[]
+  items    OrderItem[]
+  payments Payment[]
 }
 
 model OrderItem {
-  id        Int    @id @default(autoincrement())
+  id        Int   @id @default(autoincrement())
   productId Int
   name      String
   price     Float
   quantity  Int
   subtotal  Float
-  orderId   Int
+  orderId   Int   @unique
 
-  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([orderId])
   @@index([productId])
@@ -128,7 +128,7 @@ model OrderItem {
 
 model Payment {
   id        Int      @id @default(autoincrement())
-  orderId   Int
+  orderId   Int      @unique
   method    String
   amount    Float
   provider  String?
@@ -136,9 +136,7 @@ model Payment {
   metadata  Json?
   paidAt    DateTime @default(now())
 
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-
-  @@index([orderId])
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 }
 
 model CashRegister {
@@ -160,17 +158,17 @@ model CashRegister {
 }
 
 model Expense {
-  id             Int       @id @default(autoincrement())
-  description    String?   @db.Text
-  concept        String?   @db.Text
-  amount         Float
-  category       String
-  timestamp      DateTime
-  userId         Int?
-  userName       String?
-  notes          String?   @db.Text
-  cashRegisterId Int?
-  paidFromCashRegister Boolean @default(false)
+  id                   Int      @id @default(autoincrement())
+  description          String?  @db.Text
+  concept              String?  @db.Text
+  amount               Float
+  category             String
+  timestamp            DateTime
+  userId               Int?
+  userName             String?
+  notes                String?  @db.Text
+  cashRegisterId       Int?
+  paidFromCashRegister Boolean  @default(false)
 
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   cashRegister CashRegister? @relation(fields: [cashRegisterId], references: [id], onDelete: SetNull, onUpdate: Cascade)
@@ -182,18 +180,18 @@ model Expense {
 }
 
 model SupplyMovement {
-  id        Int       @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   supplyId  Int
   type      String
   quantity  Float
   unitCost  Float?
   totalCost Float?
-  reason    String?   @db.Text
-  reference String?   @db.Text
+  reason    String?  @db.Text
+  reference String?  @db.Text
   userId    Int?
   userName  String?
   timestamp DateTime
-  notes     String?   @db.Text
+  notes     String?  @db.Text
 
   supply ProductSupply @relation(fields: [supplyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   user   User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)

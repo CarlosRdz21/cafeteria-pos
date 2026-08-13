@@ -1,0 +1,12 @@
+.angular/
+android/
+backend/dist/
+backend/node_modules/
+backend/src/generated/
+coverage/
+dist/
+node_modules/
+public/
+src/assets/
+*.min.*
+package-lock.json

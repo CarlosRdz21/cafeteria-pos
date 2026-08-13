@@ -1,7 +1,14 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { AppliedPromotionSummary, Order, OrderItem, Product } from '../models/domain.models';
+import {
+  AppliedPromotionSummary,
+  Order,
+  OrderItem,
+  PaymentDetails,
+  PaymentMethod,
+  Product
+} from '../../shared/models/domain.models';
 import { buildApiUrl } from '../config/server.config';
 
 @Injectable({
@@ -73,16 +80,12 @@ export class OrderService {
   }
 
   async createCompletedOrder(data: {
-    items: any[];
-    paymentMethod: 'cash' | 'card';
+    items: OrderItem[];
+    paymentMethod: PaymentMethod;
     amountPaid?: number;
     discountTotal?: number;
     appliedPromotions?: AppliedPromotionSummary[];
-    paymentDetails?: {
-      provider?: string;
-      reference?: string;
-      metadata?: Record<string, unknown>;
-    };
+    paymentDetails?: PaymentDetails;
   }) {
     if (!data.items || data.items.length === 0) {
       throw new Error('El pedido está vacío');
@@ -95,7 +98,7 @@ export class OrderService {
       throw new Error('El monto pagado es insuficiente');
     }
 
-    return this.http.post<any>(buildApiUrl('orders'), {
+    return this.http.post<Order>(buildApiUrl('orders'), {
       items: data.items,
       status: 'completed',
       paymentMethod: data.paymentMethod,
@@ -107,13 +110,9 @@ export class OrderService {
   }
 
   async completeOrder(
-    paymentMethod: 'cash' | 'card',
+    paymentMethod: PaymentMethod,
     amountPaid?: number,
-    paymentDetails?: {
-      provider?: string;
-      reference?: string;
-      metadata?: Record<string, unknown>;
-    }
+    paymentDetails?: PaymentDetails
   ): Promise<number | null> {
     const created = await this.createCompletedOrder({
       items: this.currentOrderSubject.value,
@@ -126,7 +125,7 @@ export class OrderService {
   }
 
   async getCompletedOrders(limit: number = 50): Promise<Order[]> {
-    const rows = await this.http.get<any[]>(buildApiUrl('orders'), {
+    const rows = await this.http.get<Order[]>(buildApiUrl('orders'), {
       params: { status: 'completed' }
     }).toPromise();
     return (rows || []).slice(0, limit);

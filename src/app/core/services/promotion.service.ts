@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
-import { OrderItem, Product } from '../models/domain.models';
+import { OrderItem, Product } from '../../shared/models/domain.models';
 import { firstValueFrom } from 'rxjs';
 import { buildApiUrl } from '../config/server.config';
 

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { buildApiUrl } from '../config/server.config';
-import { Expense } from '../models/domain.models';
+import { Expense } from '../../shared/models/domain.models';
 
 @Injectable({ providedIn: 'root' })
 export class ExpenseService {
@@ -12,29 +12,28 @@ export class ExpenseService {
 
   constructor(private http: HttpClient) {}
 
-  async getByDateRange(start: Date, end: Date): Promise<Expense[]> {
-    const rows = await firstValueFrom(this.http.get<Expense[]>(this.api, {
+  async obtenerPorRangoFechas(inicio: Date, fin: Date): Promise<Expense[]> {
+    const gastos = await firstValueFrom(this.http.get<Expense[]>(this.api, {
       params: {
-        startDate: start.toISOString(),
-        endDate: end.toISOString()
+        startDate: inicio.toISOString(),
+        endDate: fin.toISOString()
       }
     }));
-    return (rows || []).map(row => ({
-      ...row,
-      timestamp: row.timestamp ? new Date(row.timestamp) : new Date()
+    return (gastos || []).map(gasto => ({
+      ...gasto,
+      timestamp: gasto.timestamp ? new Date(gasto.timestamp) : new Date()
     }));
   }
 
-  async create(payload: Omit<Expense, 'id'>): Promise<Expense> {
-    const created = await firstValueFrom(this.http.post<Expense>(this.api, payload));
+  async crear(datosGasto: Omit<Expense, 'id'>): Promise<Expense> {
+    const gastoCreado = await firstValueFrom(this.http.post<Expense>(this.api, datosGasto));
     return {
-      ...created,
-      timestamp: created?.timestamp ? new Date(created.timestamp) : new Date()
+      ...gastoCreado,
+      timestamp: gastoCreado?.timestamp ? new Date(gastoCreado.timestamp) : new Date()
     };
   }
 
-  async delete(id: number): Promise<void> {
-    await firstValueFrom(this.http.delete(`${this.api}/${id}`));
+  async eliminar(idGasto: number): Promise<void> {
+    await firstValueFrom(this.http.delete(`${this.api}/${idGasto}`));
   }
 }
-

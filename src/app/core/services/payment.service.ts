@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { buildApiUrl } from '../config/server.config';
+import { PaymentMethod } from '../../shared/models/domain.models';
 
 export type MercadoPagoPreferenceRequest = {
   externalReference: string;
@@ -55,7 +56,7 @@ export class PaymentService {
 
   registerPayment(
     orderId: number,
-    method: 'cash' | 'card',
+    method: PaymentMethod,
     amountPaid?: number
   ) {
     return this.http.post(this.API, {

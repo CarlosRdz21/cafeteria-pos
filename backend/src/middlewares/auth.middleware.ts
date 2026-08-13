@@ -5,6 +5,11 @@ export interface AuthRequest extends Request {
   user?: { userId: number; role: string };
 }
 
+interface AuthenticatedTokenPayload {
+  userId: number;
+  role: string;
+}
+
 export function authMiddleware(roles?: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const header = req.headers.authorization;
@@ -12,7 +17,10 @@ export function authMiddleware(roles?: string[]) {
 
     const token = header.split(' ')[1];
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET as string
+      ) as AuthenticatedTokenPayload;
       req.user = decoded;
 
       if (roles && !roles.includes(decoded.role)) {

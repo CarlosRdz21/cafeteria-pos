@@ -1,8 +1,11 @@
 import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { AuthService } from './auth.service';
-import { getServerUrl } from '../config/server.config';
+import { AuthService } from '../auth/auth.service';
+import { getServerUrl, guardarUrlServidorLocal } from '../config/server.config';
+import { Order } from '../../shared/models/domain.models';
+
+type OrderSocketNotification = Order & { message?: string };
 
 @Injectable({ providedIn: 'root' })
 export class SocketService {
@@ -12,16 +15,14 @@ export class SocketService {
   private connectedSubject = new BehaviorSubject<boolean>(false);
   connected$ = this.connectedSubject.asObservable();
 
-  // Eventos del sistema
-  newOrderNotification$ = new Subject<any>();
-  orderUpdatedNotification$ = new Subject<any>();
+  newOrderNotification$ = new Subject<OrderSocketNotification>();
+  orderUpdatedNotification$ = new Subject<OrderSocketNotification>();
   orderCancelledNotification$ = new Subject<number>();
 
   constructor(private authService: AuthService) {}
 
   setServerUrl(url: string) {
-    this.serverUrl = url;
-    localStorage.setItem('serverUrl', url);
+    this.serverUrl = guardarUrlServidorLocal(url);
   }
 
   connect() {
@@ -30,21 +31,27 @@ export class SocketService {
     const token = this.authService.token;
     if (!token) return;
 
+    this.disconnect();
     this.socket = io(this.serverUrl, {
       auth: { token }
     });
 
     this.socket.on('connect', () => {
-      console.log('🔌 Socket conectado');
       this.connectedSubject.next(true);
     });
 
     this.socket.on('disconnect', () => {
-      console.log('❌ Socket desconectado');
       this.connectedSubject.next(false);
     });
 
-    // 🔔 Eventos del backend
+    this.socket.on('connect_error', error => {
+      this.connectedSubject.next(false);
+      if (error.message === 'Invalid token' || error.message === 'Unauthorized') {
+        this.authService.logout();
+        this.disconnect();
+      }
+    });
+
     this.socket.on('new-order', order => {
       this.newOrderNotification$.next(order);
     });
@@ -59,7 +66,9 @@ export class SocketService {
   }
 
   disconnect() {
+    this.socket?.removeAllListeners();
     this.socket?.disconnect();
+    this.socket = undefined;
     this.connectedSubject.next(false);
   }
 

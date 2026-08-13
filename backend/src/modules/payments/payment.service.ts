@@ -1,0 +1,100 @@
+import { prisma } from '../../config/prisma';
+
+type PaymentDetails = {
+  provider?: string;
+  reference?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export class PaymentService {
+
+  static async registerPayment(
+    orderId: number,
+    method: 'cash' | 'card',
+    amountPaid?: number,
+    details?: PaymentDetails,
+    client?: any
+  ) {
+    // 🔎 Obtener la orden para conocer el total
+    const db = client ?? (prisma as any);
+    const order = await db.order.findUnique({
+      where: { id: orderId }
+    });
+
+    if (!order) {
+      throw new Error('Orden no encontrada');
+    }
+
+    const existingPayment = await db.payment.findFirst({
+      where: { orderId },
+      orderBy: { paidAt: 'asc' }
+    });
+
+    if (existingPayment) {
+      if (order.status !== 'completed') {
+        await db.order.update({
+          where: { id: orderId },
+          data: { status: 'completed' }
+        });
+      }
+      return existingPayment;
+    }
+
+    let payment;
+    try {
+      payment = await db.payment.create({
+      data: {
+        orderId,
+        method,
+        // 💡 SI es tarjeta → usar el total de la orden
+        amount: order.total,
+        provider: details?.provider || null,
+        reference: details?.reference || null,
+        metadata: details?.metadata ?? null
+      }
+      });
+    } catch (error: unknown) {
+      const codigo = typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : '';
+      if (codigo !== 'P2002') throw error;
+
+      const paymentAfterConflict = await db.payment.findFirst({
+        where: { orderId },
+        orderBy: { paidAt: 'asc' }
+      });
+      if (!paymentAfterConflict) throw error;
+      return paymentAfterConflict;
+    }
+
+    // 🔄 Marcar orden como completada
+    await db.order.update({
+      where: { id: orderId },
+      data: {
+        status: 'completed'
+      }
+    });
+
+    return payment;
+  }
+
+
+  static async getPaymentsByDateRange(start: Date, end: Date) {
+    const db = prisma as any;
+    return db.payment.findMany({
+      where: {
+        paidAt: {
+          gte: start,
+          lte: end
+        }
+      },
+      include: {
+        order: {
+          include: { items: true }
+        }
+      },
+      orderBy: { paidAt: 'desc' }
+    });
+  }
+
+}

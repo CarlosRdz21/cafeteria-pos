@@ -1,7 +1,7 @@
 ﻿import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { CashRegister, Order, OrderItem } from '../models/domain.models';
+import { CashRegister, Order, OrderItem } from '../../shared/models/domain.models';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { firstValueFrom } from 'rxjs';
@@ -46,7 +46,6 @@ export class PrinterService {
   private characteristic: any = null;
   private lastBluetoothIssue = '';
   private nativeConnected = false;
-  private nativeConnectedAddress = '';
   private readonly ticketLogoPath = 'assets/images/logoCafeteria.png';
   private operationQueue: Promise<void> = Promise.resolve();
   private configCache: PrinterConfig | null = null;
@@ -238,7 +237,7 @@ export class PrinterService {
 
       if (!this.isWebBluetoothAvailable()) {
         this.setBluetoothIssue(this.getUnsupportedBluetoothMessage());
-        console.error(this.lastBluetoothIssue);
+        console.error('No fue posible preparar la conexión Bluetooth');
         return null;
       }
 
@@ -253,7 +252,7 @@ export class PrinterService {
       return printer;
     } catch (error) {
       this.setBluetoothIssue(this.mapBluetoothError(error, 'No se pudo seleccionar impresora'));
-      console.error('Error al seleccionar impresora:', error);
+      console.error('Error al seleccionar impresora');
       return null;
     }
   }
@@ -289,7 +288,6 @@ export class PrinterService {
 
         const result = await ThermalPrinter.connect({ address: target.address });
         this.nativeConnected = !!result.connected;
-        this.nativeConnectedAddress = result.address || target.address;
         this.addKnownPrinter(target.name, target.address);
         this.saveConfig({ bluetoothName: target.name });
         this.clearBluetoothIssue();
@@ -298,7 +296,7 @@ export class PrinterService {
 
       if (!this.isWebBluetoothAvailable()) {
         this.setBluetoothIssue(this.getUnsupportedBluetoothMessage());
-        console.error(this.lastBluetoothIssue);
+        console.error('No fue posible preparar la conexión Bluetooth');
         return false;
       }
 
@@ -320,7 +318,7 @@ export class PrinterService {
       });
 
       if (expectedName && this.bluetoothDevice?.name && this.bluetoothDevice.name !== expectedName) {
-        console.warn(`Impresora seleccionada: ${this.bluetoothDevice.name}. Esperada: ${expectedName}`);
+        console.warn('La impresora seleccionada no coincide con la configurada');
       }
 
       this.attachDisconnectionListener(this.bluetoothDevice);
@@ -341,7 +339,7 @@ export class PrinterService {
       }
 
       this.clearBluetoothIssue();
-      console.log('Impresora conectada:', this.bluetoothDevice.name);
+      console.log('Impresora conectada');
       return true;
     } catch (error: any) {
       const name = String(error?.name || '');
@@ -350,7 +348,7 @@ export class PrinterService {
         return false;
       }
       this.setBluetoothIssue(this.mapBluetoothError(error, 'Error al conectar impresora'));
-      console.error('Error al conectar impresora:', error);
+      console.error('Error al conectar impresora');
       console.error('Nota: muchas POS-58 usan Bluetooth clasico (SPP) y no BLE. Web Bluetooth solo funciona con BLE/GATT.');
       return false;
     }
@@ -364,7 +362,6 @@ export class PrinterService {
         // no-op
       } finally {
         this.nativeConnected = false;
-        this.nativeConnectedAddress = '';
       }
       return;
     }
@@ -392,7 +389,7 @@ export class PrinterService {
             await this.writeChunked(command);
           }
         } catch (withLogoError) {
-          console.warn('Fallo la impresion con logo. Reintentando sin logo...', withLogoError);
+          console.warn('Fallo la impresion con logo. Reintentando sin logo...');
           const commands = await this.generateReceiptCommands(order, businessInfo, false);
           for (const command of commands) {
             await this.writeChunked(command);
@@ -401,7 +398,7 @@ export class PrinterService {
 
         return true;
       } catch (error) {
-        console.error('Error al imprimir:', error);
+        console.error('Error al imprimir');
         return false;
       }
     });
@@ -441,7 +438,7 @@ export class PrinterService {
 
         return true;
       } catch (error) {
-        console.error('Error al imprimir comanda:', error);
+        console.error('Error al imprimir comanda');
         return false;
       }
     });
@@ -464,7 +461,7 @@ export class PrinterService {
 
         return true;
       } catch (error) {
-        console.error('Error al imprimir cuenta previa:', error);
+        console.error('Error al imprimir cuenta previa');
         return false;
       }
     });
@@ -487,7 +484,7 @@ export class PrinterService {
 
         return true;
       } catch (error) {
-        console.error('Error al imprimir corte de caja:', error);
+        console.error('Error al imprimir corte de caja');
         return false;
       }
     });
@@ -506,7 +503,7 @@ export class PrinterService {
         await this.writeChunked(command);
         return true;
       } catch (error) {
-        console.error('Error al abrir cajon:', error);
+        console.error('Error al abrir cajon');
         return false;
       }
     });
@@ -832,7 +829,7 @@ export class PrinterService {
 
       return commands;
     } catch (error) {
-      console.warn('No se pudo generar/imprimir logo del ticket:', error);
+      console.warn('No se pudo generar/imprimir logo del ticket');
       return [];
     }
   }

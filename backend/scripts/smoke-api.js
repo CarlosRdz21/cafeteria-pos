@@ -1,98 +1,132 @@
-/* eslint-disable no-console */
-const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:3000';
-const cleanup = process.env.CLEANUP !== '0';
+const {
+  analizarUrlBaseDatos,
+  validarConfiguracionBasePruebas,
+} = require('./test-database-safety.js');
 
-async function request(path, options = {}) {
+function validarEntorno(env = process.env) {
+  validarConfiguracionBasePruebas(env, { requerirDestructiva: true });
+
+  const baseUrl = String(env.TEST_BASE_URL || '').trim();
+  const adminUsername = String(env.TEST_ADMIN_USERNAME || '').trim();
+  const adminPassword = String(env.TEST_ADMIN_PASSWORD || '');
+  if (!baseUrl || !adminUsername || !adminPassword) {
+    throw new Error('Se requieren TEST_BASE_URL, TEST_ADMIN_USERNAME y TEST_ADMIN_PASSWORD');
+  }
+
+  return { baseUrl: baseUrl.replace(/\/$/, ''), adminUsername, adminPassword };
+}
+
+async function request(baseUrl, path, options = {}, token) {
   const response = await fetch(`${baseUrl}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
   });
 
   const text = await response.text();
-  let body;
+  let body = null;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {
-    body = text;
+    body = null;
   }
 
   if (!response.ok) {
-    const detail = typeof body === 'string' ? body : JSON.stringify(body);
-    throw new Error(`HTTP ${response.status} ${response.statusText} on ${path}: ${detail}`);
+    throw new Error(`HTTP ${response.status} en ${path}`);
   }
-
   return body;
 }
 
-async function main() {
-  const stamp = Date.now();
-  const username = `qa_${stamp}`;
-  const password = 'Qa123456!';
-  let createdUserId = null;
+async function ejecutarSmoke(env = process.env) {
+  const { baseUrl, adminUsername, adminPassword } = validarEntorno(env);
+  const prefijo = `qa_smoke_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+  let tokenAdministrador = '';
+  let usuarioCreadoId = null;
+  let pedidoCreadoId = null;
 
   try {
-    const createdUser = await request('/api/users', {
+    const sesionAdministrador = await request(baseUrl, '/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: adminUsername, password: adminPassword }),
+    });
+    tokenAdministrador = String(sesionAdministrador?.token || '');
+    if (!tokenAdministrador) throw new Error('El login de pruebas no devolvio JWT');
+
+    const usuarioCreado = await request(baseUrl, '/api/users', {
       method: 'POST',
       body: JSON.stringify({
-        username,
-        name: 'QA Hostinger',
-        password,
-        role: 'admin',
+        username: prefijo,
+        name: `QA Smoke ${prefijo}`,
+        password: `Qa-${prefijo}-123!`,
+        role: 'mesero',
         active: true,
       }),
-    });
-    createdUserId = createdUser.id;
+    }, tokenAdministrador);
+    usuarioCreadoId = Number(usuarioCreado?.id || 0) || null;
+    if (!usuarioCreadoId) throw new Error('No se obtuvo el id del usuario temporal');
 
-    const login = await request('/api/auth/login', {
+    const sesionTemporal = await request(baseUrl, '/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username: prefijo, password: `Qa-${prefijo}-123!` }),
     });
+    const tokenTemporal = String(sesionTemporal?.token || '');
+    if (!tokenTemporal) throw new Error('El usuario temporal no obtuvo JWT');
 
-    const createdOrder = await request('/api/orders', {
+    const pedidoCreado = await request(baseUrl, '/api/orders', {
       method: 'POST',
       body: JSON.stringify({
         status: 'pending',
-        items: [
-          {
-            productId: 900001,
-            name: 'QA Cafe Americano',
-            quantity: 2,
-            price: 45,
-            subtotal: 90,
-          },
-        ],
+        customerName: prefijo,
+        items: [{ productId: 900001, name: prefijo, quantity: 1, price: 1, subtotal: 1 }],
       }),
-    });
+    }, tokenTemporal);
+    pedidoCreadoId = Number(pedidoCreado?.id || 0) || null;
+    if (!pedidoCreadoId) throw new Error('No se obtuvo el id del pedido temporal');
 
-    const fetchedOrder = await request(`/api/orders/${createdOrder.id}`);
-    const pendingOrders = await request('/api/orders?status=pending');
-
-    const summary = {
-      baseUrl,
-      createdUserId,
-      createdUsername: createdUser.username,
-      loginUserId: login.user?.id,
-      tokenReceived: Boolean(login.token),
-      createdOrderId: createdOrder.id,
-      fetchedOrderStatus: fetchedOrder.status,
-      pendingOrdersCount: Array.isArray(pendingOrders) ? pendingOrders.length : null,
-    };
+    const pedidoConsultado = await request(baseUrl, `/api/orders/${pedidoCreadoId}`, {}, tokenTemporal);
+    if (Number(pedidoConsultado?.id) !== pedidoCreadoId) {
+      throw new Error('La consulta no devolvio el pedido temporal');
+    }
 
     console.log('SMOKE_OK');
-    console.log(JSON.stringify(summary, null, 2));
+    console.log(JSON.stringify({ login: true, usuarioTemporal: true, pedidoTemporal: true }));
   } finally {
-    if (cleanup && createdUserId) {
+    if (pedidoCreadoId && tokenAdministrador) {
       try {
-        await request(`/api/users/${createdUserId}`, { method: 'DELETE' });
-      } catch (error) {
-        console.warn('Cleanup warning:', error instanceof Error ? error.message : String(error));
+        await request(baseUrl, `/api/orders/${pedidoCreadoId}`, { method: 'DELETE' }, tokenAdministrador);
+      } catch {
+        console.warn(`No se pudo limpiar el pedido temporal ${pedidoCreadoId}`);
+      }
+    }
+    if (usuarioCreadoId && tokenAdministrador) {
+      try {
+        await request(baseUrl, `/api/users/${usuarioCreadoId}`, { method: 'DELETE' }, tokenAdministrador);
+      } catch {
+        console.warn(`No se pudo limpiar el usuario temporal ${usuarioCreadoId}`);
       }
     }
   }
 }
 
-main().catch((error) => {
-  console.error('SMOKE_FAIL');
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-});
+if (require.main === module) {
+  ejecutarSmoke().catch(error => {
+    console.error('SMOKE_FAIL');
+    console.error(error instanceof Error ? error.message : 'Error desconocido');
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  nombreBaseDatos: url => {
+    try {
+      return analizarUrlBaseDatos(url).nombreBaseDatos.toLowerCase();
+    } catch {
+      return '';
+    }
+  },
+  validarEntorno,
+  ejecutarSmoke,
+};

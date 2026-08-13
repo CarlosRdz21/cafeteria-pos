@@ -2,7 +2,8 @@ import { DOCUMENT } from '@angular/common';
 import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SocketService } from './core/services/socket.service';
-import { AuthService } from './core/services/auth.service';
+import { AuthService } from './core/auth/auth.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -23,6 +24,7 @@ import { AuthService } from './core/services/auth.service';
   `]
 })
 export class AppComponent implements OnInit, OnDestroy {
+  private readonly subscriptions = new Subscription();
   private readonly onDocumentFocusIn = (event: Event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement && !target.hasAttribute('enterkeyhint')) {
@@ -62,19 +64,22 @@ export class AppComponent implements OnInit, OnDestroy {
     this.document.addEventListener('focusin', this.onDocumentFocusIn);
     this.document.addEventListener('keydown', this.onDocumentKeyDown);
 
-    this.authService.currentUser$.subscribe(user => {
-      if (user && !this.socketService.isConnected()) {
-        this.socketService.connect();
-        return;
-      }
+    this.subscriptions.add(
+      this.authService.usuarioActual$.subscribe(usuario => {
+        if (usuario && !this.socketService.isConnected()) {
+          this.socketService.connect();
+          return;
+        }
 
-      if (!user && this.socketService.isConnected()) {
-        this.socketService.disconnect();
-      }
-    });
+        if (!usuario && this.socketService.isConnected()) {
+          this.socketService.disconnect();
+        }
+      })
+    );
   }
 
   ngOnDestroy() {
+    this.subscriptions.unsubscribe();
     this.document.removeEventListener('focusin', this.onDocumentFocusIn);
     this.document.removeEventListener('keydown', this.onDocumentKeyDown);
   }

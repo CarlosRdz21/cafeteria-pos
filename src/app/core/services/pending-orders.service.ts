@@ -1,8 +1,24 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
-import { AppliedPromotionSummary, Order } from '../models/domain.models';
+import {
+  AppliedPromotionSummary,
+  Order,
+  OrderItem,
+  PaymentDetails,
+  PaymentMethod
+} from '../../shared/models/domain.models';
 import { buildApiUrl } from '../config/server.config';
+
+interface DatosPedidoPendiente {
+  items: OrderItem[];
+  tableNumber: string;
+  customerName: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: 'pending';
+}
 
 @Injectable({ providedIn: 'root' })
 export class PendingOrdersService {
@@ -10,97 +26,97 @@ export class PendingOrdersService {
     return buildApiUrl('orders');
   }
 
-  private pendingOrdersSubject = new BehaviorSubject<Order[]>([]);
-  pendingOrders$ = this.pendingOrdersSubject.asObservable();
+  private sujetoPedidosPendientes = new BehaviorSubject<Order[]>([]);
+  pedidosPendientes$ = this.sujetoPedidosPendientes.asObservable();
 
   constructor(private http: HttpClient) {}
 
-  async loadPendingOrders() {
+  async cargarPedidosPendientes() {
     this.http.get<Order[]>(`${this.API}?status=pending`)
-      .subscribe(orders => this.pendingOrdersSubject.next(orders));
+      .subscribe(pedidos => this.sujetoPedidosPendientes.next(pedidos));
   }
 
-  upsertPendingOrder(order: Order) {
-    const current = this.pendingOrdersSubject.value;
-    const index = current.findIndex(existing => existing.id === order.id);
+  /**
+   * Mantiene la copia local sincronizada con Socket.IO.
+   * Si el pedido dejó de estar pendiente, se retira para no mostrar datos obsoletos.
+   */
+  actualizarOAgregarPedidoPendiente(pedido: Order) {
+    const pedidosActuales = this.sujetoPedidosPendientes.value;
+    const indice = pedidosActuales.findIndex(pedidoExistente => pedidoExistente.id === pedido.id);
 
-    if (order.status !== 'pending') {
-      if (index >= 0) {
-        const next = [...current];
-        next.splice(index, 1);
-        this.pendingOrdersSubject.next(next);
+    if (pedido.status !== 'pending') {
+      if (indice >= 0) {
+        const pedidosSiguientes = [...pedidosActuales];
+        pedidosSiguientes.splice(indice, 1);
+        this.sujetoPedidosPendientes.next(pedidosSiguientes);
       }
       return;
     }
 
-    if (index >= 0) {
-      const next = [...current];
-      next[index] = order;
-      this.pendingOrdersSubject.next(next);
+    if (indice >= 0) {
+      const pedidosSiguientes = [...pedidosActuales];
+      pedidosSiguientes[indice] = pedido;
+      this.sujetoPedidosPendientes.next(pedidosSiguientes);
       return;
     }
 
-    this.pendingOrdersSubject.next([order, ...current]);
+    this.sujetoPedidosPendientes.next([pedido, ...pedidosActuales]);
   }
 
-  removePendingOrder(orderId: number) {
-    this.pendingOrdersSubject.next(
-      this.pendingOrdersSubject.value.filter(order => order.id !== orderId)
+  quitarPedidoPendiente(idPedido: number) {
+    this.sujetoPedidosPendientes.next(
+      this.sujetoPedidosPendientes.value.filter(pedido => pedido.id !== idPedido)
     );
   }
 
-  async createPendingOrder(payload: any) {
-    return this.http.post<Order>(this.API, payload).toPromise();
+  async crearPedidoPendiente(datosPedido: DatosPedidoPendiente) {
+    return this.http.post<Order>(this.API, datosPedido).toPromise();
   }
 
-  async updatePendingOrder(orderId: number, items: any[]) {
+  async actualizarPedidoPendiente(idPedido: number, productos: OrderItem[]) {
     return this.http
-      .patch<any>(`${this.API}/${orderId}/status`, {
+      .patch<Order>(`${this.API}/${idPedido}/status`, {
         status: 'pending',
-        items
+        items: productos
       })
       .toPromise();
   }
 
-  async replacePendingOrderItems(orderId: number, items: any[]) {
+  async reemplazarProductosPedidoPendiente(idPedido: number, productos: OrderItem[]) {
     return this.http
-      .put<Order>(`${this.API}/${orderId}`, { items })
+      .put<Order>(`${this.API}/${idPedido}`, { items: productos })
       .toPromise();
   }
 
-  async cancelPendingOrder(orderId: number) {
+  async cancelarPedidoPendiente(idPedido: number) {
     return this.http
-      .patch(`${this.API}/${orderId}/cancel`, {})
+      .patch(`${this.API}/${idPedido}/cancel`, {})
       .toPromise();
   }
 
-  async completePendingOrder(
-    orderId: number,
-    paymentMethod: 'cash' | 'card',
-    items: any[],
-    discountTotal?: number,
-    appliedPromotions?: AppliedPromotionSummary[],
-    amountPaid?: number,
-    paymentDetails?: {
-      provider?: string;
-      reference?: string;
-      metadata?: Record<string, unknown>;
-    }
+  async completarPedidoPendiente(
+    idPedido: number,
+    metodoPago: PaymentMethod,
+    productos: OrderItem[],
+    descuentoTotal?: number,
+    promocionesAplicadas?: AppliedPromotionSummary[],
+    montoPagado?: number,
+    detallesPago?: PaymentDetails
   ) {
-    return this.http.patch(`${this.API}/${orderId}/status`, {
+    return this.http.patch<Order>(`${this.API}/${idPedido}/status`, {
       status: 'completed',
-      paymentMethod,
-      items,
-      discountTotal: discountTotal ?? 0,
-      appliedPromotions: appliedPromotions ?? [],
-      amountPaid,
-      paymentDetails
+      paymentMethod: metodoPago,
+      items: productos,
+      discountTotal: descuentoTotal ?? 0,
+      appliedPromotions: promocionesAplicadas ?? [],
+      amountPaid: montoPagado,
+      paymentDetails: detallesPago
     }).toPromise();
   }
 
-  async getPendingOrder(orderId: number) {
+  async obtenerPedidoPendiente(idPedido: number) {
     return this.http
-      .get<any>(`${this.API}/${orderId}`)
+      .get<Order>(`${this.API}/${idPedido}`)
       .toPromise();
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
-import { CashRegister } from '../models/domain.models';
+import { CashRegister, PaymentMethod } from '../../shared/models/domain.models';
 import { buildApiUrl } from '../config/server.config';
 
 @Injectable({
@@ -17,15 +17,17 @@ export class CashRegisterService {
   }
 
   constructor(private http: HttpClient) {
-    this.initPromise = this.loadCurrentRegister();
+    // La consulta se difiere hasta que AuthService termine de construirse. Ejecutarla
+    // sincrónicamente activa el interceptor mientras AuthService sigue inicializándose.
+    this.initPromise = Promise.resolve().then(() => this.loadCurrentRegister());
   }
 
   private async loadCurrentRegister() {
     try {
       const row = await this.http.get<any>(`${this.API}/current`).toPromise();
       this.currentRegisterSubject.next(this.mapRegister(row));
-    } catch (error) {
-      console.error('Error al cargar caja actual desde API:', error);
+    } catch (_error) {
+      console.error('Error al cargar caja actual desde API');
       this.currentRegisterSubject.next(null);
     }
   }
@@ -40,7 +42,7 @@ export class CashRegisterService {
       this.currentRegisterSubject.next(mapped);
       return mapped?.id ?? null;
     } catch (error) {
-      console.error('Error al abrir caja:', error);
+      console.error('Error al abrir caja');
       return null;
     }
   }
@@ -54,12 +56,12 @@ export class CashRegisterService {
       this.currentRegisterSubject.next(null);
       return true;
     } catch (error) {
-      console.error('Error al cerrar caja:', error);
+      console.error('Error al cerrar caja');
       return false;
     }
   }
 
-  async recordSale(amount: number, paymentMethod: 'cash' | 'card'): Promise<void> {
+  async recordSale(amount: number, paymentMethod: PaymentMethod): Promise<void> {
     await this.http.post(`${this.API}/current/record-sale`, {
       amount,
       paymentMethod
@@ -89,7 +91,7 @@ export class CashRegisterService {
       const rows = await this.http.get<any[]>(`${this.API}?limit=${limit}`).toPromise();
       return (rows || []).map(row => this.mapRegister(row)).filter((row): row is CashRegister => !!row);
     } catch (error) {
-      console.error('Error al cargar historial de caja desde API:', error);
+      console.error('Error al cargar historial de caja desde API');
       return [];
     }
   }

@@ -1,7 +1,27 @@
-import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 import { PrismaClient, Prisma } from '@prisma/client';
+
+// Este importador puede borrar datos; siempre carga el entorno local aislado.
+const resultadoEntorno = dotenv.config({
+  path: path.resolve(process.cwd(), '.env.test'),
+  override: true,
+  quiet: true
+});
+if (resultadoEntorno.error) {
+  throw new Error('No se pudo cargar backend/.env.test');
+}
+
+// El verificador CommonJS también protege las demás herramientas MySQL locales.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validarConfiguracionBasePruebas } = require('./test-database-safety.js') as {
+  validarConfiguracionBasePruebas: (
+    env: NodeJS.ProcessEnv,
+    opciones: { requerirDestructiva: boolean }
+  ) => unknown;
+};
+validarConfiguracionBasePruebas(process.env, { requerirDestructiva: true });
 
 type Snapshot = {
   meta: { app: string; schemaVersion: number; generatedAt: string };
