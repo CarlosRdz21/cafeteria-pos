@@ -39,6 +39,31 @@
   --shadow-sidebar: 12px 0 36px rgba(8, 4, 2, 0.2);
   --shadow-topbar: 0 8px 24px rgba(8, 4, 2, 0.16);
 
+  /* Alias semánticos usados por las capas visuales de cada funcionalidad. */
+  --color-fondo: var(--color-bg-primary);
+  --color-superficie: var(--color-surface);
+  --color-superficie-elevada: var(--color-surface-raised);
+  --color-superficie-suave: var(--color-bg-secondary);
+  --color-borde: var(--color-border);
+  --color-borde-fuerte: #65452f;
+  --color-texto: var(--color-text-primary);
+  --color-texto-secundario: var(--color-text-secondary);
+  --color-texto-tenue: var(--color-text-muted);
+  --color-caramelo: var(--color-accent);
+  --color-caramelo-claro: var(--color-accent-hover);
+  --color-crema: var(--color-cream);
+  --color-beige: var(--color-cream-soft);
+  --color-exito: var(--color-success);
+  --color-error: var(--color-danger);
+  --topbar-altura: var(--topbar-height);
+  --radio-sm: var(--radius-sm);
+  --radio-md: var(--radius-md);
+  --radio-lg: var(--radius-lg);
+  --radio-xl: var(--radius-xl);
+  --sombra-sm: 0 8px 22px rgba(8, 4, 2, 0.18);
+  --sombra-md: var(--shadow-card);
+  --sombra-lg: 0 28px 64px rgba(8, 4, 2, 0.4);
+
   --app-viewport-height: 100vh;
   --safe-top: 0px;
   --safe-right: 0px;
@@ -225,6 +250,110 @@ body {
   .mat-mdc-card {
     border-radius: var(--radius-md) !important;
   }
+}
+
+/* Usuarios y configuración conservan plantillas inline; estas reglas sólo cambian su presentación. */
+app-users-admin,
+app-printer-settings,
+app-settings,
+app-network-test {
+  display: block;
+  min-height: 100%;
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+}
+
+app-users-admin mat-toolbar,
+app-printer-settings mat-toolbar,
+app-settings mat-toolbar,
+app-network-test mat-toolbar {
+  min-height: 68px !important;
+  height: 68px !important;
+  padding-inline: clamp(12px, 2.5vw, 28px) !important;
+  color: var(--color-text-primary) !important;
+  background: var(--color-surface) !important;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: none !important;
+}
+
+app-users-admin .admin-container,
+app-printer-settings .container,
+app-settings .settings-container,
+app-network-test .test-container {
+  min-height: calc(100dvh - var(--topbar-height) - 68px) !important;
+  padding: clamp(16px, 2.5vw, 30px) !important;
+  background: radial-gradient(circle at 90% 0%, rgba(196, 139, 79, 0.08), transparent 28rem), var(--color-bg-primary) !important;
+}
+
+app-users-admin .admin-container { max-width: 1400px; margin-inline: auto; }
+app-printer-settings .container,
+app-settings .settings-container,
+app-network-test .test-container { max-width: 920px; margin-inline: auto; }
+
+app-users-admin .form-card,
+app-users-admin .user-item,
+app-printer-settings .container mat-card,
+app-settings .settings-container mat-card,
+app-network-test .test-container mat-card {
+  color: var(--color-text-primary) !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+app-users-admin mat-card-title,
+app-printer-settings mat-card-title,
+app-settings mat-card-title,
+app-network-test mat-card-title { color: var(--color-text-primary) !important; font-weight: 760 !important; }
+
+app-users-admin .toggle-field,
+app-printer-settings .status,
+app-settings .connection-status,
+app-settings .toggle-field,
+app-settings .instructions,
+app-settings .note,
+app-network-test .test-result,
+app-network-test .instructions,
+app-network-test .step,
+app-network-test .details {
+  color: var(--color-text-secondary) !important;
+  background: var(--color-surface-raised) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+app-users-admin mat-card-actions,
+app-printer-settings mat-card-actions { background: var(--color-surface-raised) !important; border-top: 1px solid var(--color-border); }
+app-users-admin .user-item { transition: transform 160ms ease, border-color 160ms ease; }
+app-users-admin .user-item:hover { transform: translateY(-1px); border-color: rgba(196, 139, 79, 0.48); }
+app-users-admin .user-info h3 { color: var(--color-text-primary); font-weight: 740; }
+app-users-admin .username,
+app-users-admin .created { color: var(--color-text-secondary) !important; }
+app-users-admin .role { color: var(--color-text-secondary) !important; background: var(--color-surface-raised) !important; border: 1px solid var(--color-border); }
+app-users-admin .role.admin { color: var(--color-cream) !important; background: rgba(196, 139, 79, 0.17) !important; }
+app-users-admin .status.active,
+app-printer-settings .status.connected,
+app-settings .connection-status.connected,
+app-network-test .result-item.success { color: #bce8ce !important; background: rgba(58, 148, 101, 0.14) !important; }
+app-users-admin .status.inactive,
+app-network-test .result-item.error { color: #ffc0c0 !important; background: rgba(196, 73, 73, 0.14) !important; }
+app-printer-settings .bt-message { color: #ffd9aa !important; background: rgba(214, 143, 67, 0.13) !important; border: 1px solid rgba(214, 143, 67, 0.3); }
+app-users-admin button,
+app-printer-settings button,
+app-settings button,
+app-network-test button { border-radius: var(--radius-sm) !important; }
+
+@media (max-width: 600px) {
+  app-users-admin mat-toolbar,
+  app-printer-settings mat-toolbar,
+  app-settings mat-toolbar,
+  app-network-test mat-toolbar { min-height: 58px !important; height: 58px !important; }
+
+  app-users-admin .admin-container,
+  app-printer-settings .container,
+  app-settings .settings-container,
+  app-network-test .test-container { padding: 12px !important; }
 }
 
 /* Print styles */
