@@ -344,6 +344,97 @@ app-printer-settings button,
 app-settings button,
 app-network-test button { border-radius: var(--radius-sm) !important; }
 
+::selection {
+  color: var(--color-text-dark);
+  background: var(--color-cream);
+}
+
+button,
+a,
+[role='button'],
+.mat-mdc-button-base {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mat-mdc-button-base:not(.mat-mdc-icon-button) {
+  min-height: 42px;
+}
+
+.mat-mdc-icon-button {
+  --mdc-icon-button-state-layer-size: 44px;
+}
+
+.mat-mdc-button-disabled,
+button:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.58;
+}
+
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-color: var(--color-surface-raised);
+  --mdc-dialog-subhead-color: var(--color-text-primary);
+  --mdc-dialog-supporting-text-color: var(--color-text-secondary);
+}
+
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: var(--color-surface-raised);
+  --mdc-snackbar-supporting-text-color: var(--color-text-primary);
+  --mat-snack-bar-button-color: var(--color-cream);
+}
+
+.mat-mdc-progress-spinner {
+  --mdc-circular-progress-active-indicator-color: var(--color-accent-hover);
+}
+
+.mat-mdc-slide-toggle {
+  --mdc-switch-selected-track-color: var(--color-accent);
+  --mdc-switch-selected-hover-track-color: var(--color-accent-hover);
+  --mdc-switch-selected-focus-track-color: var(--color-accent-hover);
+  --mdc-switch-selected-handle-color: var(--color-cream-soft);
+}
+
+.cdk-overlay-backdrop.cdk-overlay-backdrop-showing {
+  background: rgba(10, 7, 6, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.table-scroll {
+  scrollbar-gutter: stable;
+  overscroll-behavior-inline: contain;
+}
+
+@media (max-width: 600px) {
+  .cdk-overlay-pane.mat-mdc-dialog-panel {
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: min(68dvh, 620px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .mat-mdc-card,
+  .mat-mdc-dialog-surface,
+  .mat-mdc-form-field,
+  button,
+  a {
+    forced-color-adjust: auto;
+  }
+}
+
 @media (max-width: 600px) {
   app-users-admin mat-toolbar,
   app-printer-settings mat-toolbar,
