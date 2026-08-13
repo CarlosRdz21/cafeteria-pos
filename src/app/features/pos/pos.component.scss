@@ -1,5 +1,6 @@
 :host {
   display: block;
+  height: 100%;
 }
 
 /* Overrides minimos para evitar que las cards se estiren raro */
@@ -22,7 +23,7 @@
 }
 
 .product-image {
-  background: #eee;
+  background: var(--color-superficie-suave);
 }
 
 .product-image img {
@@ -35,5 +36,380 @@
 @media (max-width: 768px) {
   .product-card {
     max-width: none;
+  }
+}
+
+/* Capa visual del POS: conserva intactos los eventos y la lógica del componente. */
+:host ::ng-deep .pos-container {
+  min-height: 100%;
+  height: calc(100dvh - var(--topbar-altura));
+  background:
+    radial-gradient(circle at 12% 0%, rgba(196, 139, 79, 0.09), transparent 28rem),
+    var(--color-fondo);
+  color: var(--color-texto);
+}
+
+:host ::ng-deep .toolbar {
+  min-height: 68px;
+  height: 68px;
+  padding: 0 clamp(16px, 2.5vw, 32px);
+  color: var(--color-texto);
+  background: rgba(31, 25, 23, 0.88) !important;
+  border-bottom: 1px solid var(--color-borde);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+
+:host ::ng-deep .toolbar-logo {
+  width: 38px;
+  height: 38px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--color-crema);
+}
+
+:host ::ng-deep .toolbar-title {
+  margin-left: 12px;
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+:host ::ng-deep .toolbar-subtitle {
+  color: var(--color-beige);
+}
+
+:host ::ng-deep .main-content {
+  gap: 18px;
+  padding: 18px;
+}
+
+:host ::ng-deep .products-panel {
+  padding: 0;
+  scrollbar-gutter: stable;
+}
+
+:host ::ng-deep .category-filters {
+  margin: 0 0 12px;
+  padding-bottom: 3px;
+}
+
+:host ::ng-deep .mat-mdc-chip-set .mdc-evolution-chip-set__chips {
+  gap: 8px;
+}
+
+:host ::ng-deep .mat-mdc-chip-option {
+  min-height: 38px;
+  color: var(--color-texto-secundario) !important;
+  background: var(--color-superficie) !important;
+  border: 1px solid var(--color-borde);
+  border-radius: 999px !important;
+}
+
+:host ::ng-deep .mat-mdc-chip-option.mat-mdc-chip-selected {
+  color: #21150f !important;
+  background: linear-gradient(135deg, var(--color-caramelo), var(--color-caramelo-claro)) !important;
+  border-color: transparent;
+}
+
+:host ::ng-deep .search-box {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+:host ::ng-deep .search-box mat-icon {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  z-index: 1;
+  color: var(--color-texto-tenue);
+  transform: translateY(-50%);
+}
+
+:host ::ng-deep .search-box input {
+  min-height: 50px;
+  padding: 12px 16px 12px 50px;
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+:host ::ng-deep .search-box input::placeholder {
+  color: var(--color-texto-tenue);
+}
+
+:host ::ng-deep .search-box input:focus {
+  background: var(--color-superficie-elevada);
+  border-color: var(--color-caramelo);
+  box-shadow: 0 0 0 3px rgba(196, 139, 79, 0.16);
+}
+
+:host ::ng-deep .products-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+  padding-bottom: 18px;
+}
+
+:host ::ng-deep .product-card {
+  max-width: none;
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+  transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
+}
+
+:host ::ng-deep .product-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(196, 139, 79, 0.55);
+  box-shadow: var(--sombra-md);
+}
+
+:host ::ng-deep .product-card:focus-within {
+  outline: 2px solid var(--color-caramelo);
+  outline-offset: 2px;
+}
+
+:host ::ng-deep .product-image {
+  height: 154px;
+  border-radius: var(--radio-lg) var(--radio-lg) 0 0;
+}
+
+:host ::ng-deep .product-image img {
+  transition: transform 220ms ease;
+}
+
+:host ::ng-deep .product-card:hover .product-image img {
+  transform: scale(1.035);
+}
+
+:host ::ng-deep .product-badge {
+  color: #fff7f4;
+  background: var(--color-error);
+  border-radius: 999px;
+}
+
+:host ::ng-deep .product-card mat-card-content {
+  padding: 14px 15px 16px;
+}
+
+:host ::ng-deep .product-card h3 {
+  color: var(--color-texto);
+  font-weight: 720;
+  line-height: 1.25;
+}
+
+:host ::ng-deep .product-description {
+  min-height: 30px;
+  color: var(--color-texto-secundario);
+  line-height: 1.35;
+}
+
+:host ::ng-deep .price {
+  color: var(--color-caramelo-claro);
+  font-size: 1.18rem;
+  font-weight: 800;
+}
+
+:host ::ng-deep .empty-products {
+  grid-column: 1 / -1;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-texto-secundario);
+  text-align: center;
+  border: 1px dashed var(--color-borde-fuerte);
+  border-radius: var(--radio-lg);
+}
+
+:host ::ng-deep .empty-products mat-icon {
+  width: 44px;
+  height: 44px;
+  color: var(--color-caramelo);
+  font-size: 44px;
+}
+
+:host ::ng-deep .empty-products strong {
+  color: var(--color-texto);
+  font-size: 1rem;
+}
+
+:host ::ng-deep .order-panel {
+  min-width: 390px;
+  max-width: 460px;
+  overflow: hidden;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-md);
+}
+
+:host ::ng-deep .order-header {
+  padding: 18px 20px;
+  background: linear-gradient(145deg, rgba(196, 139, 79, 0.11), transparent 70%);
+  border-bottom-color: var(--color-borde);
+}
+
+:host ::ng-deep .order-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--color-caramelo-claro);
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+:host ::ng-deep .order-header h2 {
+  color: var(--color-texto);
+  font-size: 1.25rem;
+}
+
+:host ::ng-deep .order-summary,
+:host ::ng-deep .item-price {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .order-items {
+  padding: 14px;
+}
+
+:host ::ng-deep .order-item {
+  padding: 12px;
+  background: var(--color-superficie-suave);
+  border-color: var(--color-borde);
+  border-radius: var(--radio-md);
+}
+
+:host ::ng-deep .item-info h4 {
+  color: var(--color-texto);
+  font-weight: 700;
+}
+
+:host ::ng-deep .item-actions button {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .quantity {
+  color: var(--color-texto);
+}
+
+:host ::ng-deep .item-subtotal {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .empty-order {
+  color: var(--color-texto-tenue);
+}
+
+:host ::ng-deep .empty-order mat-icon {
+  color: var(--color-caramelo);
+  opacity: 0.66;
+}
+
+:host ::ng-deep .order-totals {
+  padding: 16px 20px 20px;
+  background: var(--color-superficie-elevada);
+  border-top-color: var(--color-borde);
+}
+
+:host ::ng-deep .total-row {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .total-row.total {
+  color: var(--color-texto);
+  border-top-color: var(--color-caramelo);
+}
+
+:host ::ng-deep .total-row.total span:last-child {
+  color: var(--color-caramelo-claro);
+  font-size: 1.35rem;
+}
+
+:host ::ng-deep .pending-btn {
+  color: #21150f !important;
+  background: var(--color-beige) !important;
+}
+
+:host ::ng-deep .payment-btn,
+:host ::ng-deep .cancel-pending-btn,
+:host ::ng-deep .pending-btn {
+  border-radius: var(--radio-sm) !important;
+}
+
+@media (max-width: 1180px) {
+  :host ::ng-deep .order-panel {
+    min-width: 350px;
+  }
+}
+
+@media (max-width: 1024px) {
+  :host ::ng-deep .pos-container {
+    height: auto;
+  }
+
+  :host ::ng-deep .main-content {
+    overflow: visible;
+  }
+
+  :host ::ng-deep .order-panel {
+    max-width: none;
+    border: 1px solid var(--color-borde);
+  }
+}
+
+@media (max-width: 768px) {
+  :host ::ng-deep .main-content {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  :host ::ng-deep .products-panel {
+    padding: 0 0 calc(104px + var(--app-safe-bottom));
+  }
+
+  :host ::ng-deep .toolbar {
+    min-height: 58px;
+    height: 58px;
+    padding-inline: 12px;
+  }
+
+  :host ::ng-deep .toolbar-logo {
+    width: 34px;
+    height: 34px;
+  }
+
+  :host ::ng-deep .products-grid {
+    gap: 10px;
+  }
+
+  :host ::ng-deep .product-image {
+    height: 112px;
+  }
+
+  :host ::ng-deep .product-card mat-card-content {
+    padding: 11px 12px 13px;
+  }
+
+  :host ::ng-deep .order-panel {
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -16px 35px rgba(0, 0, 0, 0.32);
+  }
+}
+
+@media (max-width: 420px) {
+  :host ::ng-deep .product-image {
+    height: 98px;
+  }
+
+  :host ::ng-deep .product-card h3 {
+    font-size: 0.86rem;
   }
 }

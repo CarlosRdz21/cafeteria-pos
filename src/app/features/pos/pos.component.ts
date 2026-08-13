@@ -50,7 +50,7 @@ import { buildApiUrl } from '../../core/config/server.config';
         <!-- Toolbar -->
         <mat-toolbar color="primary" class="toolbar">
           <img class="toolbar-logo" src="assets/images/Logo-Cafeteria.png" alt="Logo Dulce Aroma Cafe" />
-          <span class="toolbar-title">Dulce Aroma Café</span>
+          <span class="toolbar-title">Punto de venta</span>
         <span class="toolbar-subtitle" *ngIf="addToOrderId">
             (Agregando a Orden #{{addToOrderId}})
         </span>
@@ -137,6 +137,7 @@ import { buildApiUrl } from '../../core/config/server.config';
           </div>
 
           <div class="search-box">
+            <mat-icon aria-hidden="true">search</mat-icon>
             <input
               type="text"
               [(ngModel)]="searchTerm"
@@ -169,6 +170,11 @@ import { buildApiUrl } from '../../core/config/server.config';
                 </div>
               </mat-card-content>
             </mat-card>
+            <div class="empty-products" *ngIf="filteredProducts.length === 0">
+              <mat-icon>search_off</mat-icon>
+              <strong>No encontramos productos</strong>
+              <span>Prueba con otra categoría o término de búsqueda.</span>
+            </div>
           </div>
         </div>
 
@@ -176,7 +182,8 @@ import { buildApiUrl } from '../../core/config/server.config';
         <div class="order-panel" [class.mobile-collapsed]="isMobileLayout && !orderPanelExpanded">
           <div class="order-header" [class.interactive]="isMobileLayout" (click)="toggleOrderPanel()">
             <div class="order-heading">
-              <h2>Orden Actual</h2>
+              <span class="order-eyebrow">Comanda en curso</span>
+              <h2>Orden actual</h2>
               <p class="order-summary" *ngIf="isMobileLayout && currentOrder.length > 0">
                 {{ currentOrder.length }} {{ currentOrder.length === 1 ? 'producto' : 'productos' }} · \${{totals.total.toFixed(2)}}
               </p>
