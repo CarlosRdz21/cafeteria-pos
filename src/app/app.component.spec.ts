@@ -17,6 +17,9 @@ describe('AppComponent', () => {
       'isConnected',
     ]);
     socketService.isConnected.and.returnValue(false);
+    Object.defineProperty(socketService, 'connected$', {
+      value: new BehaviorSubject(false).asObservable(),
+    });
 
     await TestBed.configureTestingModule({
       imports: [AppComponent],
@@ -24,7 +27,10 @@ describe('AppComponent', () => {
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: { usuarioActual$: usuarioActual$.asObservable() },
+          useValue: {
+            usuarioActual$: usuarioActual$.asObservable(),
+            logout: jasmine.createSpy('logout'),
+          },
         },
         { provide: SocketService, useValue: socketService },
       ],

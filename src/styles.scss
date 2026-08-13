@@ -3,6 +3,42 @@
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
 :root {
+  --color-bg-primary: #1b100a;
+  --color-bg-secondary: #24150d;
+  --color-surface: #2d1c12;
+  --color-surface-raised: #352116;
+  --color-surface-hover: #3a2417;
+  --color-border: #493021;
+  --color-cream: #f0d4b5;
+  --color-cream-soft: #f7eadb;
+  --color-text-primary: #fffaf4;
+  --color-text-secondary: #cdb9a6;
+  --color-text-muted: #9d8875;
+  --color-text-dark: #25170f;
+  --color-accent: #c49362;
+  --color-accent-hover: #d4a875;
+  --color-success: #6fa66f;
+  --color-warning: #d8a657;
+  --color-danger: #d96459;
+  --color-info: #72a2c0;
+  --sidebar-width: 270px;
+  --topbar-height: 84px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --shadow-card: 0 16px 38px rgba(8, 4, 2, 0.22);
+  --shadow-card-hover: 0 20px 44px rgba(8, 4, 2, 0.32);
+  --shadow-sidebar: 12px 0 36px rgba(8, 4, 2, 0.2);
+  --shadow-topbar: 0 8px 24px rgba(8, 4, 2, 0.16);
+
   --app-viewport-height: 100vh;
   --safe-top: 0px;
   --safe-right: 0px;
@@ -42,12 +78,13 @@ html, body {
   height: 100%;
   min-height: var(--app-viewport-height);
   margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
 }
 
 body {
-  background-color: #f5f5f5;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
   overscroll-behavior-y: contain;
 }
 
@@ -72,16 +109,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--color-bg-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--color-border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--color-accent);
 }
 
 /* Animaciones */
@@ -102,11 +139,67 @@ body {
 
 /* Material Design overrides */
 .mat-mdc-card {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: var(--shadow-card) !important;
 }
 
 .mat-mdc-raised-button {
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+}
+
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  --mdc-protected-button-container-color: var(--color-cream);
+  --mdc-protected-button-label-text-color: var(--color-text-dark);
+  --mdc-filled-button-container-color: var(--color-cream);
+  --mdc-filled-button-label-text-color: var(--color-text-dark);
+}
+
+.mat-mdc-outlined-button {
+  --mdc-outlined-button-outline-color: var(--color-border);
+  --mdc-outlined-button-label-text-color: var(--color-cream-soft);
+  border-radius: var(--radius-md) !important;
+}
+
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-container-shape: var(--radius-md);
+  --mdc-outlined-text-field-outline-color: var(--color-border);
+  --mdc-outlined-text-field-hover-outline-color: var(--color-accent);
+  --mdc-outlined-text-field-focus-outline-color: var(--color-cream);
+  --mdc-outlined-text-field-input-text-color: var(--color-text-primary);
+  --mdc-outlined-text-field-label-text-color: var(--color-text-secondary);
+  --mdc-outlined-text-field-focus-label-text-color: var(--color-cream);
+  --mdc-outlined-text-field-caret-color: var(--color-cream);
+}
+
+.mat-mdc-dialog-surface,
+.mat-mdc-menu-panel,
+.mat-mdc-select-panel {
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+  background: var(--color-surface-raised) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.mat-mdc-option,
+.mat-mdc-menu-item,
+.mat-mdc-dialog-title,
+.mat-mdc-dialog-content {
+  color: var(--color-text-primary) !important;
+}
+
+.mat-mdc-option:hover,
+.mat-mdc-menu-item:hover {
+  background: var(--color-surface-hover) !important;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(240, 212, 181, 0.72);
+  outline-offset: 2px;
 }
 
 /* Asegura que snackbars en top no queden debajo de la barra de estado */
@@ -120,12 +213,17 @@ body {
   top: 0;
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --mat-toolbar-container-background-color: var(--color-surface);
+  --mat-toolbar-container-text-color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .mat-mdc-card {
-    border-radius: 0 !important;
+    border-radius: var(--radius-md) !important;
   }
 }
 
