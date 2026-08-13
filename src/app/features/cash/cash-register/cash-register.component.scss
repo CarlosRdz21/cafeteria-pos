@@ -1,0 +1,233 @@
+:host {
+  display: block;
+  min-height: 100%;
+  color: var(--color-texto);
+  background: var(--color-fondo);
+}
+
+:host ::ng-deep > mat-toolbar,
+:host ::ng-deep mat-toolbar {
+  min-height: 68px;
+  height: 68px;
+  padding-inline: clamp(12px, 2.5vw, 28px);
+  color: var(--color-texto);
+  background: var(--color-superficie) !important;
+  border-bottom: 1px solid var(--color-borde);
+  box-shadow: none;
+}
+
+:host ::ng-deep mat-toolbar > span:not(.toolbar-spacer) {
+  font-size: 1.1rem;
+  font-weight: 760;
+}
+
+:host ::ng-deep .cash-register-container {
+  min-height: calc(100dvh - var(--topbar-altura) - 68px);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(196, 139, 79, 0.09), transparent 28rem),
+    var(--color-fondo);
+}
+
+:host ::ng-deep .mat-mdc-tab-header {
+  background: var(--color-superficie);
+  border-bottom: 1px solid var(--color-borde);
+}
+
+:host ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+  color: var(--color-texto-secundario);
+  font-weight: 700;
+}
+
+:host ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .mat-mdc-tab .mdc-tab-indicator__content--underline {
+  border-color: var(--color-caramelo) !important;
+}
+
+:host ::ng-deep .tab-content {
+  padding: clamp(16px, 2.5vw, 30px);
+}
+
+:host ::ng-deep .action-card,
+:host ::ng-deep .register-info-card,
+:host ::ng-deep .tab-content > mat-card {
+  max-width: 920px;
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-md);
+}
+
+:host ::ng-deep mat-card-header {
+  padding-top: 20px;
+}
+
+:host ::ng-deep mat-card-title {
+  color: var(--color-texto);
+  font-weight: 760;
+}
+
+:host ::ng-deep .empty-state {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .empty-state mat-icon {
+  color: var(--color-caramelo);
+}
+
+:host ::ng-deep .empty-state h2 {
+  color: var(--color-texto);
+}
+
+:host ::ng-deep .info-item {
+  padding: 14px;
+  background: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-sm);
+}
+
+:host ::ng-deep .info-item .label,
+:host ::ng-deep .summary-label {
+  color: var(--color-texto-tenue);
+}
+
+:host ::ng-deep .info-item .value,
+:host ::ng-deep .summary-value,
+:host ::ng-deep .sales-summary h3 {
+  color: var(--color-texto);
+}
+
+:host ::ng-deep .info-item .value.amount {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .summary-card {
+  min-height: 82px;
+  background: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+}
+
+:host ::ng-deep .summary-card mat-icon {
+  padding: 9px;
+  box-sizing: content-box;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:host ::ng-deep .summary-card.cash mat-icon { color: #75c99a; }
+:host ::ng-deep .summary-card.card mat-icon { color: #7bb9e8; }
+:host ::ng-deep .summary-card.expenses mat-icon { color: #ef9292; }
+:host ::ng-deep .summary-card.total mat-icon { color: var(--color-caramelo-claro); }
+
+:host ::ng-deep .transactions-info {
+  color: #a9d5f7;
+  background: rgba(71, 145, 199, 0.12);
+  border: 1px solid rgba(71, 145, 199, 0.28);
+}
+
+:host ::ng-deep .expected-cash {
+  color: #21150f;
+  background: linear-gradient(135deg, var(--color-caramelo), var(--color-caramelo-claro));
+  border-radius: var(--radio-lg);
+  box-shadow: 0 16px 34px rgba(196, 139, 79, 0.16);
+}
+
+:host ::ng-deep .history-card {
+  color: var(--color-texto);
+  background: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  box-shadow: none;
+}
+
+:host ::ng-deep .history-card.open {
+  border-left-color: var(--color-exito);
+}
+
+:host ::ng-deep .status-badge.open {
+  color: #bce8ce;
+  background: rgba(58, 148, 101, 0.16);
+}
+
+:host ::ng-deep .status-badge.closed {
+  color: var(--color-texto-secundario);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:host ::ng-deep .detail-row {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .detail-row span:last-child {
+  color: var(--color-texto);
+  font-weight: 650;
+}
+
+:host ::ng-deep .dialog-overlay {
+  background: rgba(10, 7, 6, 0.76);
+  backdrop-filter: blur(7px);
+}
+
+:host ::ng-deep .close-dialog {
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-fuerte);
+  border-radius: var(--radio-xl);
+  box-shadow: var(--sombra-lg);
+}
+
+:host ::ng-deep .close-info p {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .expected-info {
+  color: var(--color-texto-secundario);
+  background: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borde);
+}
+
+:host ::ng-deep .expected-info .amount {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .difference-display.positive {
+  color: #bce8ce;
+  background: rgba(58, 148, 101, 0.14);
+}
+
+:host ::ng-deep .difference-display.negative {
+  color: #ffc0c0;
+  background: rgba(196, 73, 73, 0.16);
+}
+
+:host ::ng-deep .warning {
+  color: #ffd9aa;
+  background: rgba(214, 143, 67, 0.13);
+  border: 1px solid rgba(214, 143, 67, 0.3);
+}
+
+:host ::ng-deep mat-card-actions {
+  background: rgba(39, 31, 28, 0.97);
+  border-top-color: var(--color-borde);
+}
+
+@media (max-width: 768px) {
+  :host ::ng-deep mat-toolbar {
+    min-height: 58px;
+    height: 58px;
+  }
+
+  :host ::ng-deep .tab-content {
+    padding: 12px;
+  }
+
+  :host ::ng-deep .action-card,
+  :host ::ng-deep .register-info-card,
+  :host ::ng-deep .tab-content > mat-card {
+    border-radius: var(--radio-lg);
+  }
+}
