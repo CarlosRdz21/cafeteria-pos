@@ -19,6 +19,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 @Component({
   selector: 'app-supplies-admin',
   standalone: true,
+  styleUrl: './supplies-admin.component.scss',
   imports: [
     CommonModule,
     FormsModule,
@@ -430,4 +431,3 @@ export class SuppliesAdminComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 }
-

@@ -23,6 +23,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 @Component({
   selector: 'app-inventory-movements',
   standalone: true,
+  styleUrl: './inventory-movements.component.scss',
   imports: [
     CommonModule,
     FormsModule,
@@ -518,4 +519,3 @@ export class InventoryMovementsComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 }
-
