@@ -1,0 +1,330 @@
+:host {
+  display: block;
+  min-height: 100%;
+  color: var(--color-texto);
+  background: var(--color-fondo);
+}
+
+:host ::ng-deep mat-toolbar {
+  min-height: 68px;
+  height: 68px;
+  padding-inline: clamp(12px, 2.5vw, 28px);
+  color: var(--color-texto);
+  background: var(--color-superficie) !important;
+  border-bottom: 1px solid var(--color-borde);
+  box-shadow: none;
+}
+
+:host ::ng-deep mat-toolbar > span {
+  font-size: 1.1rem;
+  font-weight: 760;
+}
+
+:host ::ng-deep .reports-container {
+  min-height: calc(100dvh - var(--topbar-altura) - 68px);
+  padding: clamp(16px, 2.5vw, 30px);
+  background:
+    radial-gradient(circle at 88% 0%, rgba(196, 139, 79, 0.09), transparent 30rem),
+    var(--color-fondo);
+}
+
+:host ::ng-deep .filters-card {
+  margin-bottom: 22px;
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+}
+
+:host ::ng-deep .filters-card mat-card-content {
+  padding: 18px 20px;
+}
+
+:host ::ng-deep .filters-row {
+  gap: 14px;
+}
+
+:host ::ng-deep .filters-row button {
+  min-height: 48px;
+  border-radius: var(--radio-sm) !important;
+}
+
+:host ::ng-deep .mat-mdc-tab-header {
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg) var(--radio-lg) 0 0;
+}
+
+:host ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+  color: var(--color-texto-secundario);
+  font-weight: 700;
+}
+
+:host ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .mat-mdc-tab .mdc-tab-indicator__content--underline {
+  border-color: var(--color-caramelo) !important;
+}
+
+:host ::ng-deep .tab-content {
+  padding: 22px 0 4px;
+}
+
+:host ::ng-deep .kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+:host ::ng-deep .kpi-card {
+  position: relative;
+  min-height: 108px;
+  overflow: hidden;
+  color: var(--color-texto);
+  background: linear-gradient(145deg, var(--color-superficie-elevada), var(--color-superficie));
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+}
+
+:host ::ng-deep .kpi-card::after {
+  content: '';
+  position: absolute;
+  right: -34px;
+  bottom: -48px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(196, 139, 79, 0.07);
+}
+
+:host ::ng-deep .kpi-card mat-icon {
+  box-sizing: content-box;
+  padding: 9px;
+  font-size: 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+:host ::ng-deep .kpi-label,
+:host ::ng-deep .mini-caption,
+:host ::ng-deep .sale-date,
+:host ::ng-deep .promotion-meta,
+:host ::ng-deep .bar-percent,
+:host ::ng-deep .hour-x-label {
+  color: var(--color-texto-tenue);
+}
+
+:host ::ng-deep .kpi-value {
+  color: var(--color-texto);
+  font-size: clamp(1.35rem, 2vw, 1.72rem);
+}
+
+:host ::ng-deep .kpi-card.total-sales .kpi-value,
+:host ::ng-deep .kpi-card.net-profit .kpi-value {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .chart-card,
+:host ::ng-deep .mini-chart-card,
+:host ::ng-deep .tab-content > mat-card {
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-lg);
+  box-shadow: var(--sombra-sm);
+}
+
+:host ::ng-deep mat-card-title {
+  color: var(--color-texto);
+  font-weight: 740;
+}
+
+:host ::ng-deep .finance-summary-item,
+:host ::ng-deep .promotion-kpi,
+:host ::ng-deep .promotion-breakdown-row,
+:host ::ng-deep .rank-chart {
+  color: var(--color-texto);
+  background: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+}
+
+:host ::ng-deep .finance-summary-item.income strong,
+:host ::ng-deep .mini-highlight { color: #83bce8; }
+:host ::ng-deep .finance-summary-item.expenses strong { color: #ef9292; }
+:host ::ng-deep .finance-summary-item.profit strong,
+:host ::ng-deep .finance-summary-item.margin strong,
+:host ::ng-deep .mini-total { color: #75c99a; }
+:host ::ng-deep .promotion-kpi strong { color: var(--color-caramelo-claro); }
+
+:host ::ng-deep .bar.cash {
+  background: linear-gradient(to top, #387c58, #75c99a);
+}
+
+:host ::ng-deep .bar.card {
+  background: linear-gradient(to top, #396d93, #83bce8);
+}
+
+:host ::ng-deep .bar-value,
+:host ::ng-deep .bar-label {
+  color: var(--color-texto);
+}
+
+:host ::ng-deep .weekday-col-bar {
+  background: linear-gradient(to top, var(--color-caramelo), var(--color-caramelo-claro));
+  border-radius: 5px 5px 0 0;
+}
+
+:host ::ng-deep .hour-grid-line {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+:host ::ng-deep .hour-line-path {
+  stroke: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .hour-line-dot {
+  fill: var(--color-superficie);
+  stroke: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .rank-index,
+:host ::ng-deep .rank {
+  color: var(--color-crema);
+  background: rgba(196, 139, 79, 0.17);
+}
+
+:host ::ng-deep .rank-track,
+:host ::ng-deep .expense-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:host ::ng-deep .rank-fill,
+:host ::ng-deep .expense-fill {
+  background: linear-gradient(90deg, var(--color-caramelo), var(--color-caramelo-claro));
+}
+
+:host ::ng-deep .quantity-badge {
+  color: #bce8ce;
+  background: rgba(58, 148, 101, 0.16);
+}
+
+:host ::ng-deep .total-amount,
+:host ::ng-deep .rank-stats strong {
+  color: var(--color-caramelo-claro);
+}
+
+:host ::ng-deep .table-scroll {
+  overflow: auto;
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+}
+
+:host ::ng-deep table.mat-mdc-table {
+  background: var(--color-superficie-elevada);
+}
+
+:host ::ng-deep .mat-mdc-header-row {
+  background: rgba(196, 139, 79, 0.1);
+}
+
+:host ::ng-deep .mat-mdc-header-cell {
+  color: var(--color-beige);
+  border-bottom-color: var(--color-borde-fuerte);
+  font-weight: 750;
+}
+
+:host ::ng-deep .mat-mdc-cell {
+  color: var(--color-texto-secundario);
+  border-bottom-color: var(--color-borde);
+}
+
+:host ::ng-deep .mat-mdc-row:hover {
+  background: rgba(196, 139, 79, 0.06);
+}
+
+:host ::ng-deep .sale-card,
+:host ::ng-deep .inventory-card {
+  color: var(--color-texto);
+  background: var(--color-superficie-elevada);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-md);
+  box-shadow: none;
+}
+
+:host ::ng-deep .payment-method.cash {
+  color: #bce8ce;
+  background: rgba(58, 148, 101, 0.16);
+}
+
+:host ::ng-deep .payment-method.card {
+  color: #b9dcf5;
+  background: rgba(71, 145, 199, 0.16);
+}
+
+:host ::ng-deep .sale-promo,
+:host ::ng-deep .sale-promo-entry {
+  color: #ffd9aa;
+  background: rgba(214, 143, 67, 0.13);
+  border: 1px solid rgba(214, 143, 67, 0.26);
+}
+
+:host ::ng-deep .sale-items {
+  color: var(--color-texto-secundario);
+  background: var(--color-superficie-suave);
+}
+
+:host ::ng-deep .sale-total {
+  border-top-color: var(--color-borde-fuerte);
+}
+
+:host ::ng-deep .empty-state {
+  color: var(--color-texto-secundario);
+}
+
+:host ::ng-deep .empty-state mat-icon {
+  color: var(--color-caramelo);
+}
+
+@media (max-width: 900px) {
+  :host ::ng-deep .dashboard-mini-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  :host ::ng-deep mat-toolbar {
+    min-height: 58px;
+    height: 58px;
+  }
+
+  :host ::ng-deep .reports-container {
+    padding: 12px;
+  }
+
+  :host ::ng-deep .filters-row mat-form-field,
+  :host ::ng-deep .filters-row button {
+    width: 100%;
+  }
+
+  :host ::ng-deep .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  :host ::ng-deep .kpi-card {
+    min-height: 100px;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 390px) {
+  :host ::ng-deep .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
