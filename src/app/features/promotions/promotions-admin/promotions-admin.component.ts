@@ -21,6 +21,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 @Component({
   selector: 'app-promotions-admin',
   standalone: true,
+  styleUrl: './promotions-admin.component.scss',
   imports: [
     CommonModule,
     FormsModule,

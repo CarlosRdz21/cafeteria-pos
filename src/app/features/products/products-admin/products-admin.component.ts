@@ -26,6 +26,7 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
 @Component({
   selector: 'app-products-admin',
   standalone: true,
+  styleUrl: './products-admin.component.scss',
   imports: [
     CommonModule,
     FormsModule,
@@ -2011,7 +2012,6 @@ try {
     };
   }
 }
-
 
 
 

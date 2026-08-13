@@ -33,6 +33,7 @@ import {
 @Component({
   selector: 'app-expenses',
   standalone: true,
+  styleUrl: './expenses.component.scss',
   imports: [
     CommonModule,
     FormsModule,
