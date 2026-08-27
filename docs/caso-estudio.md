@@ -147,7 +147,7 @@ La aplicacion esta dividida en tres capas principales:
 
 ### 9.1 Componentes principales
 
-- `src/app/pages`: contiene las pantallas funcionales del frontend.
+- `src/app/features`: contiene las pantallas funcionales del frontend, organizadas por dominio.
 - `src/app/core/services`: concentra servicios para consumir API, autenticacion, ordenes, pagos, caja, inventario, impresora y sockets.
 - `backend/src/routes`: define los endpoints REST.
 - `backend/src/controllers`: contiene la logica de entrada y salida de cada recurso.
