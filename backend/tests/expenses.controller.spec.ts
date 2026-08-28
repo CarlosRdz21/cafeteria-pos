@@ -8,14 +8,25 @@ const dbSimulado = vi.hoisted(() => ({
   buscarCaja: vi.fn(),
   buscarCajaPorId: vi.fn(),
   actualizarCaja: vi.fn(),
+  actualizarVariasCajas: vi.fn(),
   transaccion: vi.fn(),
   buscarGasto: vi.fn(),
   eliminarGasto: vi.fn(),
+  eliminarVariosGastos: vi.fn(),
+  ejecutarSql: vi.fn(),
 }));
 
 const clienteTransaccional = {
-  expense: { findUnique: dbSimulado.buscarGasto, delete: dbSimulado.eliminarGasto },
-  cashRegister: { findUnique: dbSimulado.buscarCajaPorId, update: dbSimulado.actualizarCaja },
+  expense: {
+    create: dbSimulado.crearGasto,
+    findUnique: dbSimulado.buscarGasto,
+    deleteMany: dbSimulado.eliminarVariosGastos,
+  },
+  cashRegister: {
+    findFirst: dbSimulado.buscarCaja,
+    updateMany: dbSimulado.actualizarVariasCajas,
+  },
+  $executeRaw: dbSimulado.ejecutarSql,
 };
 
 vi.mock('../src/config/prisma', () => ({
@@ -24,11 +35,13 @@ vi.mock('../src/config/prisma', () => ({
       findMany: dbSimulado.listarGastos,
       aggregate: dbSimulado.maximoGasto,
       create: dbSimulado.crearGasto,
+      findUnique: dbSimulado.buscarGasto,
     },
     cashRegister: {
       findFirst: dbSimulado.buscarCaja,
       findUnique: dbSimulado.buscarCajaPorId,
       update: dbSimulado.actualizarCaja,
+      updateMany: dbSimulado.actualizarVariasCajas,
     },
     $transaction: dbSimulado.transaccion,
   },
@@ -45,6 +58,10 @@ function crearRespuesta() {
 describe('ExpensesController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbSimulado.buscarGasto.mockResolvedValue(null);
+    dbSimulado.actualizarVariasCajas.mockResolvedValue({ count: 1 });
+    dbSimulado.eliminarVariosGastos.mockResolvedValue({ count: 1 });
+    dbSimulado.ejecutarSql.mockResolvedValue(1);
     dbSimulado.transaccion.mockImplementation(async (operacion: (tx: unknown) => unknown) => operacion(clienteTransaccional));
   });
 
@@ -86,8 +103,6 @@ describe('ExpensesController', () => {
   it('crea un gasto y actualiza el acumulado de la caja abierta', async () => {
     dbSimulado.buscarCaja.mockResolvedValue({ id: 5, expenses: 100 });
     dbSimulado.crearGasto.mockResolvedValue({ id: 10, amount: 300 });
-    dbSimulado.buscarCajaPorId.mockResolvedValue({ id: 5, expenses: 100 });
-    dbSimulado.actualizarCaja.mockResolvedValue({ id: 5, expenses: 400 });
     const respuesta = crearRespuesta();
 
     await ExpensesController.create({
@@ -103,8 +118,9 @@ describe('ExpensesController', () => {
       paidFromCashRegister: true,
     }) });
     expect(dbSimulado.maximoGasto).not.toHaveBeenCalled();
-    expect(dbSimulado.actualizarCaja).toHaveBeenCalledWith({
-      where: { id: 5 }, data: { expenses: 400 },
+    expect(dbSimulado.actualizarVariasCajas).toHaveBeenCalledWith({
+      where: { id: 5, status: 'open' },
+      data: { expenses: { increment: 300 } },
     });
     expect(respuesta.status).toHaveBeenCalledWith(201);
   });
@@ -133,19 +149,95 @@ describe('ExpensesController', () => {
     },
   );
 
-  it('elimina el gasto y revierte su acumulado de caja sin producir negativos', async () => {
+  it('elimina el gasto y revierte su acumulado de caja dentro de la transaccion', async () => {
     const gasto = { id: 10, amount: 300, paidFromCashRegister: true, cashRegisterId: 5 };
     dbSimulado.buscarGasto.mockResolvedValue(gasto);
-    dbSimulado.eliminarGasto.mockResolvedValue(gasto);
-    dbSimulado.buscarCajaPorId.mockResolvedValue({ id: 5, expenses: 100 });
     const respuesta = crearRespuesta();
 
     await ExpensesController.remove({ params: { id: '10' } } as unknown as Request, respuesta as unknown as Response);
 
-    expect(dbSimulado.actualizarCaja).toHaveBeenCalledWith({
-      where: { id: 5 }, data: { expenses: 0 },
-    });
+    expect(dbSimulado.eliminarVariosGastos).toHaveBeenCalledWith({ where: { id: 10 } });
+    expect(dbSimulado.ejecutarSql).toHaveBeenCalledTimes(1);
     expect(respuesta.json).toHaveBeenCalledWith(gasto);
+  });
+
+  it('reutiliza un gasto existente cuando la clave y la intencion coinciden', async () => {
+    const timestamp = new Date('2026-08-27T12:00:00.000Z');
+    const gasto = {
+      id: 10,
+      idempotencyKey: 'misma-clave',
+      concept: 'Leche',
+      description: 'Leche',
+      amount: 100,
+      category: 'Insumos',
+      notes: null,
+      paidFromCashRegister: false,
+      timestamp,
+    };
+    dbSimulado.buscarGasto.mockResolvedValue(gasto);
+    const respuesta = crearRespuesta();
+
+    await ExpensesController.create({
+      headers: { 'idempotency-key': 'misma-clave' },
+      body: {
+        concept: 'Leche',
+        category: 'Insumos',
+        amount: 100,
+        timestamp: timestamp.toISOString(),
+      },
+    } as unknown as Request, respuesta as unknown as Response);
+
+    expect(respuesta.status).toHaveBeenCalledWith(200);
+    expect(respuesta.json).toHaveBeenCalledWith(gasto);
+    expect(dbSimulado.crearGasto).not.toHaveBeenCalled();
+    expect(dbSimulado.actualizarVariasCajas).not.toHaveBeenCalled();
+  });
+
+  it('rechaza reutilizar una clave con datos contables distintos', async () => {
+    dbSimulado.buscarGasto.mockResolvedValue({
+      id: 10,
+      concept: 'Leche',
+      amount: 100,
+      category: 'Insumos',
+      notes: null,
+      paidFromCashRegister: false,
+      timestamp: new Date(),
+    });
+    const respuesta = crearRespuesta();
+
+    await ExpensesController.create({
+      body: {
+        idempotencyKey: 'clave-reutilizada',
+        concept: 'Cafe',
+        category: 'Insumos',
+        amount: 100,
+      },
+    } as Request, respuesta as unknown as Response);
+
+    expect(respuesta.status).toHaveBeenCalledWith(409);
+    expect(dbSimulado.crearGasto).not.toHaveBeenCalled();
+  });
+
+  it('no deja una respuesta exitosa si la caja se cierra antes del incremento', async () => {
+    dbSimulado.buscarCaja.mockResolvedValue({ id: 5 });
+    dbSimulado.crearGasto.mockResolvedValue({ id: 10, amount: 100 });
+    dbSimulado.actualizarVariasCajas.mockResolvedValue({ count: 0 });
+    const respuesta = crearRespuesta();
+
+    await ExpensesController.create({
+      body: {
+        idempotencyKey: 'caja-cerrada',
+        concept: 'Gas',
+        category: 'Servicios',
+        amount: 100,
+        paidFromCashRegister: true,
+      },
+    } as Request, respuesta as unknown as Response);
+
+    expect(respuesta.status).toHaveBeenCalledWith(409);
+    expect(respuesta.json).toHaveBeenCalledWith({
+      error: 'La caja se cerró antes de registrar el gasto',
+    });
   });
 
   it('delega al middleware central si falla la transaccion de eliminacion', async () => {

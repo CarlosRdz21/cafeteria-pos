@@ -159,6 +159,7 @@ model CashRegister {
 
 model Expense {
   id                   Int      @id @default(autoincrement())
+  idempotencyKey       String?  @unique
   description          String?  @db.Text
   concept              String?  @db.Text
   amount               Float
