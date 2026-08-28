@@ -152,6 +152,17 @@ gastos de reportes 245, efectivo esperado 1325 y ganancia neta 755.
 - no quedaron cajas, órdenes, pagos o gastos temporales de las pruebas;
 - el usuario MySQL sólo tiene permisos sobre la base de pruebas.
 
+Al terminar, los puertos 3000, 4200 y 9876 estaban libres; no quedaron procesos
+del backend, frontend o Karma escuchando.
+
+## Commits locales
+
+- `aa3c0a7 fix: hace atomico el registro de gastos`
+- `6ec8e9e fix: agrega idempotencia a gastos`
+- `67a338c test: valida concurrencia contable de gastos`
+
+No se hizo push, merge, rebase ni despliegue.
+
 ## Archivos principales
 
 - `backend/src/modules/expenses/expenses.controller.ts`
