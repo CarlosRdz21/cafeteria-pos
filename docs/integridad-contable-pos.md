@@ -1,180 +1,209 @@
 # Integridad contable de Dulce Aroma Café POS
 
-## Estado
+## Estado y aislamiento
 
-**Corrección de cierre concurrente aprobada en MySQL local aislado.**
+Las correcciones de cierre de caja y de gastos fueron validadas exclusivamente
+en la rama `test/integridad-contable-pos`, contra MySQL local
+`localhost:3306/cafeteria_pos_test`, con `NODE_ENV=test` y
+`DATABASE_URL === TEST_DATABASE_URL`.
 
-La validación se realizó exclusivamente en la rama
-`test/integridad-contable-pos`, contra `localhost:3306/cafeteria_pos_test`, con
-`NODE_ENV=test` y `DATABASE_URL === TEST_DATABASE_URL`. No se usaron Render,
-Hostinger, Mercado Pago real ni datos productivos. No hubo push, merge, rebase o
-despliegue.
+No se usaron Render, Hostinger, Mercado Pago real ni datos productivos. No hubo
+push, merge, rebase o despliegue.
 
-## Causa raíz
+## Cierre de caja concurrente
 
-`CashRegistersController.closeCurrent` consultaba primero la caja abierta y la
-cerraba después mediante un `update` que sólo filtraba por `id`. Dos o más
-solicitudes podían leer la misma fila con estado `open` y todas recibían éxito;
-el último `update` sobrescribía `closingAmount`, `difference` y `closedAt`.
+`CashRegistersController.closeCurrent` consultaba la caja abierta y después la
+cerraba con un `update` filtrado únicamente por `id`. Varias solicitudes podían
+leer la misma fila abierta y sobrescribir sus importes de cierre.
 
-La regla comercial no cambió: una caja está abierta cuando `status === 'open'`
-y el efectivo esperado es `openingAmount + cashSales - expenses`. El modelo
-actual no contiene `closedBy`, por lo que no se agregó un campo ni una migración.
+El cierre ahora reclama la fila en una transacción con un `UPDATE` parametrizado
+condicionado por `id` y `status = 'open'`. Sólo una solicitud puede cerrarla;
+las demás conservan el contrato existente y reciben 404. La actualización de
+ventas también exige una caja abierta. Si el cierre gana la carrera, Order y
+Payment se revierten, se responde 409 y no se emiten eventos Socket.IO de éxito.
 
-## Solución aplicada
+## Gastos atómicos e idempotentes
 
-El cierre ahora se ejecuta dentro de una transacción Prisma y reclama la fila con
-un `UPDATE` SQL parametrizado y condicional:
+### Causa raíz comprobada
+
+El alta anterior creaba `Expense` fuera de una transacción y después asignaba
+`CashRegister.expenses = valorAnterior + monto`. Esto permitía duplicados ante
+reintentos, estados parciales, incrementos perdidos y carreras con el cierre.
+El borrado también podía restituir el acumulado más de una vez.
+
+La prueba roja reprodujo el defecto: el mismo intento enviado 2, 5, 10 y 20
+veces creó respectivamente 2, 5, 10 y 20 gastos.
+
+### Identidad del intento
+
+Se agregó `Expense.idempotencyKey String? @unique`. La clave identifica la
+intención y no se deriva de concepto, monto o fecha. Dos gastos legítimos con
+datos iguales siguen permitidos cuando tienen claves distintas.
+
+El backend acepta la clave en `Idempotency-Key` y en el cuerpo:
+
+- misma clave y misma intención: devuelve el gasto existente con 200;
+- misma clave y datos incompatibles: devuelve 409;
+- clave nueva: crea el gasto con 201;
+- clientes antiguos sin clave: conservan compatibilidad.
+
+El frontend genera una clave por acción y la reutiliza después de un resultado
+incierto. También bloquea el botón mientras guarda. La restricción única de
+MySQL es la protección definitiva ante solicitudes simultáneas.
+
+### Atomicidad con caja
+
+Para un gasto pagado desde caja, una sola transacción localiza la caja abierta,
+incrementa `CashRegister.expenses` de forma condicional y atómica, y después
+crea el `Expense` asociado.
+
+El orden es deliberado. Una primera versión de la prueba real detectó deadlocks
+P2034 al crear primero el gasto y bloquear después la caja. Reclamar primero la
+fila compartida de CashRegister serializó el acumulado y eliminó los deadlocks
+en la repetición completa.
+
+Si el cierre gana antes del incremento, se responde 409 y no se crea el gasto.
+Si la creación falla después del incremento, toda la transacción se revierte.
+
+### Eliminación concurrente
+
+La eliminación reclama `Expense` con `deleteMany({ id })` en una transacción.
+Sólo un solicitante puede eliminarlo y restituir la caja; los demás reciben el
+404 existente. El decremento es atómico y se limita a cero. Si la caja estaba
+cerrada, también se recalculan `expectedAmount` y `difference` de forma
+consistente con el contrato actual.
+
+## Migración MySQL aislada
+
+`20260827211000_expense_idempotency` contiene únicamente:
 
 ```sql
-UPDATE CashRegister
-SET closingAmount = ?,
-    expectedAmount = openingAmount + cashSales - expenses,
-    difference = ? - (openingAmount + cashSales - expenses),
-    closedAt = ?,
-    status = 'closed'
-WHERE id = ? AND status = 'open';
+ALTER TABLE Expense ADD COLUMN idempotencyKey VARCHAR(191) NULL;
+CREATE UNIQUE INDEX Expense_idempotencyKey_key ON Expense(idempotencyKey);
 ```
 
-Sólo `affectedRows === 1` se considera exitoso. Los intentos que pierden la
-carrera conservan el contrato existente y reciben `404` con
-`No hay caja abierta`; nunca reciben 500 ni sobrescriben el cierre. El cálculo
-usa los valores de la fila al momento del reclamo, no un acumulado obsoleto.
+Se aplicó y marcó únicamente en `cafeteria_pos_test`. No se ejecutó `migrate
+deploy`, `migrate dev` ni `db push` sobre otra base.
 
-Para la carrera pago contra cierre, la actualización de ventas también exige
-`id + status='open'`. Si la caja ya se cerró, devuelve `null` y el pedido lanza
-un `ApplicationError` 409 dentro de la misma transacción. Prisma revierte
-`Order` y `Payment`, y Socket.IO no emite éxito.
+Siguen pendientes, sin aplicar:
 
-Como defensa adicional, el botón de cierre queda deshabilitado y muestra
-`Cerrando...` mientras espera la respuesta. La persistencia sigue siendo la
-protección principal.
+- `20260201003637_init`: SQL histórico de SQLite incompatible para aplicación
+  automática en MySQL;
+- `20260730190000_inventory_recipes_core`: migración previa que debe
+  reconciliarse por separado.
 
-## Archivos de esta corrección
+Continúa fuera de alcance la deriva entre el `@unique` declarado para
+`OrderItem.orderId` y el índice no único de MySQL. No debe ejecutarse `db push`
+hasta revisarla.
 
-- `backend/src/modules/cash/cash-registers.controller.ts`
-- `backend/src/modules/orders/order.controller.ts`
-- `backend/tests/cash-registers.controller.spec.ts`
-- `backend/tests/order.controller.spec.ts`
-- `backend/tests/integration/financial-concurrency.mysql.spec.ts`
-- `src/app/features/cash/cash-register/cash-register.component.ts`
-- `docs/integridad-contable-pos.md`
+## Evidencia de pruebas MySQL
 
-Los cambios frontend del rediseño y los artefactos generados en `backend/dist`
-ya estaban modificados antes de esta corrección y no deben mezclarse en sus
-commits. `dist` fue regenerado por el build obligatorio, no editado manualmente.
+`expenses-integrity.mysql.spec.ts` usa Prisma real, verifica valores persistidos
+y limpia todos sus datos temporales.
 
-## Evidencia MySQL real
+| Caso | Cobertura | Resultado |
+| --- | --- | --- |
+| Reintento sin caja | 2, 5, 10 y 20 simultáneos | PASS: un Expense |
+| Reintento con caja | 2, 5, 10 y 20 simultáneos | PASS: un Expense y un incremento |
+| Reintento secuencial | 1, 5 y 10 | PASS |
+| Gastos legítimos iguales | 5, 10 y 20 claves distintas | PASS: se conservan todos |
+| Rollback forzado | FK inválida después del incremento | PASS |
+| Gasto contra cierre | 20 carreras | PASS: sólo estados coherentes |
+| Gasto contra pago | pago 200, gasto 50 y cierre | PASS |
+| Pagos y gastos simultáneos | 10 + 10, durante 3 rondas | PASS |
+| Borrado concurrente | 2, 5 y 10 | PASS: una restitución |
+| Borrado repetido | normal y segundo intento | PASS: 200 y 404 |
+| Importes inválidos | cero, negativos, no finitos y fuera de rango | PASS: 400 |
+| Importe decimal | 12.5 | PASS |
+| Simulación contable | 3 rondas completas | PASS |
 
-La prueba `financial-concurrency.mysql.spec.ts` usa `PrismaClient` real, consulta
-los valores persistidos y limpia cada caja, pedido y pago temporal.
+La simulación usa apertura 1000, ventas en efectivo 450, ventas con tarjeta 550,
+gastos de caja 125 y gastos externos 120. Se comprobaron ventas totales 1000,
+gastos de reportes 245, efectivo esperado 1325 y ganancia neta 755.
 
-| Caso | Ejecución | Resultado |
-| --- | ---: | --- |
-| Cierre normal | 1 | PASS |
-| Cierres simultáneos | 2 × 3 rondas | PASS: 1 éxito por ronda |
-| Cierres simultáneos | 5 × 3 rondas | PASS: 1 éxito por ronda |
-| Cierres simultáneos | 10 × 3 rondas | PASS: 1 éxito por ronda |
-| Cierres simultáneos | 20 × 3 rondas | PASS: 1 éxito por ronda |
-| Reintentos después del cierre | 1, 5 y 10 | PASS: todos 404, sin cambios |
-| Importes concurrentes 750/700 | 1 carrera | PASS: persiste sólo el ganador |
-| Pago contra cierre | 20 carreras | PASS: sólo estados coherentes |
-
-En pago contra cierre sólo se aceptan dos estados:
-
-1. El pago gana: existe un Payment, Order queda `completed`, la caja acumula una
-   sola venta y el cierre incluye esa venta.
-2. El cierre gana: no queda Payment, Order continúa `pending`, la caja no cambia,
-   se responde 409 y no se emiten eventos de éxito.
-
-No hubo pagos huérfanos, órdenes parcialmente completadas, ventas agregadas
-después del cierre ni eventos Socket.IO falsos.
-
-## Validaciones
+## Validaciones finales
 
 ### Backend
 
-- `npm run db:test:validate`: PASS; test, localhost y `cafeteria_pos_test`.
-- TypeScript de producción y pruebas: PASS.
-- Lint: PASS con 0 errores y 213 advertencias heredadas.
-- Unitarias: 219 PASS; 31 integraciones omitidas por el runner unitario.
-- Integración MySQL: 31/31 PASS, repetida después del build.
-- Prisma validate del esquema MySQL: PASS.
-- Prisma generate: PASS.
-- Build: PASS.
-- `npm run verify:local`: PASS.
+- compuerta MySQL local: PASS;
+- TypeScript de producción y pruebas: PASS;
+- lint: PASS, 0 errores y 215 advertencias heredadas;
+- pruebas unitarias: 222 PASS;
+- pruebas de integración MySQL: 63/63 PASS;
+- autorización y controlador de gastos: 45/45 PASS;
+- Prisma validate y generate: PASS;
+- build y `npm run verify:local`: PASS.
 
 ### Frontend
 
-- TypeScript de aplicación y specs: PASS.
-- Lint: PASS con 0 errores y 96 advertencias heredadas.
-- Build Angular: PASS. El primer intento sin red sólo falló al inlinear Google
-  Fonts; el mismo build terminó correctamente con acceso de red.
-- Karma compiló la suite, pero ChromeHeadless no llegó a ejecutar pruebas porque
-  su proceso GPU terminó con `exit_code=-1073741790` y bloqueos de caché en
-  Windows. Es un bloqueo ambiental, no una aserción fallida; no se ocultó.
+- TypeScript de aplicación y specs: PASS;
+- lint: PASS, 0 errores y 96 advertencias heredadas;
+- build Angular: PASS;
+- la prueba nueva de `ExpenseService` compiló, pero ChromeHeadless terminó antes
+  de ejecutar specs con `exit_code=-1073741790` por el entorno GPU/caché de
+  Windows. No se contabiliza como PASS ni como fallo de aserción.
 
-## Estado final de MySQL
+### Estado final de la base aislada
 
-- 14 tablas y 144 registros de aplicación, igual que la línea base.
-- 0 cajas, pedidos o pagos temporales de estas pruebas.
-- El usuario MySQL sólo tiene permisos sobre `cafeteria_pos_test`.
-- Ninguna migración fue aplicada.
+- 14 tablas;
+- 144 registros de aplicación, igual que la línea base;
+- 148 registros totales, incluidos cuatro registros de migración;
+- índice único `Expense_idempotencyKey_key` presente;
+- no quedaron cajas, órdenes, pagos o gastos temporales de las pruebas;
+- el usuario MySQL sólo tiene permisos sobre la base de pruebas.
 
-## Migraciones y deriva pendientes
+## Archivos principales
 
-`prisma migrate status --schema prisma/schema.mysql.prisma` identifica cuatro
-migraciones en disco y dos todavía no aplicadas:
+- `backend/src/modules/expenses/expenses.controller.ts`
+- `backend/prisma/schema.mysql.prisma`
+- `backend/prisma/migrations/20260827211000_expense_idempotency/migration.sql`
+- `backend/tests/expenses.controller.spec.ts`
+- `backend/tests/integration/expenses-integrity.mysql.spec.ts`
+- `src/app/core/services/expense.service.ts`
+- `src/app/core/services/expense.service.spec.ts`
+- `src/app/shared/models/domain.models.ts`
+- `src/app/features/expenses/expenses/expenses.component.ts`
 
-- `20260201003637_init`: histórica de SQLite; riesgo alto si se intenta aplicar
-  contra MySQL sin reconciliar el historial.
-- `20260730190000_inventory_recipes_core`: cambio previo de recetas/inventario;
-  debe revisarse en una etapa separada.
-
-El esquema MySQL declara `OrderItem.orderId` como único, mientras la base y la
-migración activa usan un índice no único. No afectó estas pruebas, pero ejecutar
-`db push` podría imponer una restricción incompatible. No se corrigió.
-
-El archivo histórico `prisma/schema.prisma` aún declara SQLite y por eso
-`migrate status` sobre ese archivo devuelve P3019. El esquema activo usado por
-build y postinstall es `schema.mysql.prisma`.
-
-## Pendientes fuera de alcance
-
-- La creación de gastos asociados a caja continúa siendo no atómica y sin clave
-  de idempotencia. No se modificó.
-- Reconciliar migraciones pendientes y la deriva de `OrderItem`.
-- Resolver el entorno ChromeHeadless de Windows.
-- Revisar por separado la política de versionado de `backend/dist`.
+`backend/dist` fue regenerado por las compilaciones obligatorias y no se editó
+manualmente. Los cambios visuales previos del frontend no deben mezclarse en los
+commits de esta corrección.
 
 ## Reversión
 
-Commits locales de esta corrección:
+Revertir los commits en orden inverso con `git revert <hash>`. No usar
+`git reset --hard`, porque existen cambios frontend anteriores que deben
+conservarse.
 
-- `fix: hace atomico el cierre de caja`
-- `test: valida concurrencia entre pago y cierre de caja`
+Revertir el código no elimina la columna local. Si fuera necesario revertir
+también el esquema de pruebas, revisar y ejecutar de forma controlada:
 
-Una vez creados los commits, revertirlos en orden inverso con:
-
-```powershell
-git revert <commit-pruebas>
-git revert <commit-fix>
+```sql
+DROP INDEX Expense_idempotencyKey_key ON Expense;
+ALTER TABLE Expense DROP COLUMN idempotencyKey;
 ```
 
-No usar `git reset --hard`, porque existen cambios frontend previos que deben
-conservarse.
+No ejecutar esas sentencias en producción como parte de esta etapa.
 
 ## Resultado de aprobación
 
-| Criterio | Resultado |
+| Área | Resultado |
 | --- | --- |
-| Cierre normal | PASS |
-| 2 cierres | PASS |
-| 5 cierres | PASS |
-| 10 cierres | PASS |
-| 20 cierres | PASS |
-| Cierre repetido | PASS |
-| No sobrescritura | PASS |
-| Pago vs cierre | PASS |
+| Gasto normal | PASS |
+| Retry | PASS |
+| Idempotencia | PASS |
+| Concurrencia | PASS |
+| Atomicidad de caja | PASS |
+| Gasto contra cierre | PASS |
+| Gasto contra pago | PASS |
+| Delete normal, repetido y concurrente | PASS |
 | Rollback | PASS |
+| Reportes | PASS |
 | Integridad MySQL | PASS |
+| Simulación contable | PASS |
+
+## Pendientes fuera de alcance
+
+- reconciliar las dos migraciones antiguas pendientes;
+- resolver la deriva de `OrderItem.orderId`;
+- estabilizar ChromeHeadless en Windows;
+- revisar por separado la política de versionado de `backend/dist`.
