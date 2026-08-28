@@ -160,6 +160,7 @@ del backend, frontend o Karma escuchando.
 - `aa3c0a7 fix: hace atomico el registro de gastos`
 - `6ec8e9e fix: agrega idempotencia a gastos`
 - `67a338c test: valida concurrencia contable de gastos`
+- `2e20de5 fix: evita doble envio de gastos`
 
 No se hizo push, merge, rebase ni despliegue.
 
