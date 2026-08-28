@@ -122,9 +122,14 @@ import {
           </div>
         </mat-card-content>
         <mat-card-actions>
-          <button mat-button (click)="resetForm()">Limpiar</button>
-          <button mat-raised-button color="primary" (click)="saveExpense()">
-            Guardar Gasto
+          <button mat-button (click)="resetForm()" [disabled]="guardandoGasto">Limpiar</button>
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="saveExpense()"
+            [disabled]="guardandoGasto"
+          >
+            {{ guardandoGasto ? 'Guardando...' : 'Guardar Gasto' }}
           </button>
         </mat-card-actions>
       </mat-card>
@@ -437,6 +442,9 @@ export class ExpensesComponent implements OnInit {
   totalExpenses = 0;
 
   currentUser: User | null = null;
+  guardandoGasto = false;
+  private claveGastoPendiente: string | null = null;
+  private huellaGastoPendiente: string | null = null;
 
     newExpense: Expense = {
       concept: '',
@@ -505,12 +513,28 @@ export class ExpensesComponent implements OnInit {
   }
 
   async saveExpense() {
+    if (this.guardandoGasto) return;
+
     if (!this.newExpense.concept || this.newExpense.amount <= 0) {
       this.snackBar.open('Completa concepto y monto válido', 'Cerrar', { duration: 3000 });
       return;
     }
 
+    const huellaGasto = JSON.stringify({
+      concept: this.newExpense.concept.trim(),
+      amount: this.newExpense.amount,
+      category: this.newExpense.category,
+      timestamp: (this.newExpenseDate || new Date()).toISOString(),
+      notes: this.newExpense.notes?.trim() || '',
+      paidFromCashRegister: this.newExpense.paidFromCashRegister === true,
+    });
+    if (!this.claveGastoPendiente || this.huellaGastoPendiente !== huellaGasto) {
+      this.claveGastoPendiente = this.generarClaveIdempotencia();
+      this.huellaGastoPendiente = huellaGasto;
+    }
+
     const expense: Expense = {
+      idempotencyKey: this.claveGastoPendiente,
       concept: this.newExpense.concept.trim(),
       description: this.newExpense.concept.trim(),
       amount: this.newExpense.amount,
@@ -522,6 +546,7 @@ export class ExpensesComponent implements OnInit {
       userName: this.currentUser?.name
     };
 
+    this.guardandoGasto = true;
     try {
       if (expense.paidFromCashRegister && !this.cashRegisterService.isRegisterOpen()) {
         this.snackBar.open('No hay caja abierta para descontar este gasto', 'Cerrar', { duration: 3000 });
@@ -545,10 +570,14 @@ export class ExpensesComponent implements OnInit {
     } catch (error) {
       console.error('Error al guardar gasto');
       this.snackBar.open('Error al guardar gasto', 'Cerrar', { duration: 3000 });
+    } finally {
+      this.guardandoGasto = false;
     }
   }
 
   resetForm() {
+    this.claveGastoPendiente = null;
+    this.huellaGastoPendiente = null;
     this.newExpense = {
       concept: '',
       amount: 0,
@@ -558,6 +587,13 @@ export class ExpensesComponent implements OnInit {
       paidFromCashRegister: false
     };
     this.newExpenseDate = new Date();
+  }
+
+  private generarClaveIdempotencia(): string {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+    return `gasto-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
 
   setToday() {
