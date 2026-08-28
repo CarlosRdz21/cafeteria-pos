@@ -111,26 +111,34 @@ export class CashRegistersController {
         return res.status(400).json({ error: 'closingAmount is required' });
       }
 
-      const open = await db.cashRegister.findFirst({
-        where: { status: 'open' },
-        orderBy: { openedAt: 'desc' }
+      const updated = await db.$transaction(async (tx: Prisma.TransactionClient) => {
+        const open = await tx.cashRegister.findFirst({
+          where: { status: 'open' },
+          orderBy: { openedAt: 'desc' }
+        });
+        if (!open) return null;
+
+        const closedAt = new Date();
+        const affectedRows = await tx.$executeRaw`
+          UPDATE \`CashRegister\`
+          SET
+            \`closingAmount\` = ${closingAmount},
+            \`expectedAmount\` = \`openingAmount\` + \`cashSales\` - \`expenses\`,
+            \`difference\` = ${closingAmount} - (\`openingAmount\` + \`cashSales\` - \`expenses\`),
+            \`closedAt\` = ${closedAt},
+            \`status\` = 'closed'
+          WHERE \`id\` = ${open.id}
+            AND \`status\` = 'open'
+        `;
+
+        if (affectedRows !== 1) return null;
+
+        return tx.cashRegister.findUnique({ where: { id: open.id } });
       });
-      if (!open) {
+
+      if (!updated) {
         return res.status(404).json({ error: 'No hay caja abierta' });
       }
-
-      const expectedAmount = toNumber(open.openingAmount) + toNumber(open.cashSales) - toNumber(open.expenses);
-      const difference = closingAmount - expectedAmount;
-      const updated = await db.cashRegister.update({
-        where: { id: open.id },
-        data: {
-          closingAmount,
-          expectedAmount,
-          difference,
-          closedAt: new Date(),
-          status: 'closed'
-        }
-      });
 
       res.json(updated);
     } catch (error: unknown) {
@@ -199,8 +207,8 @@ export class CashRegistersController {
     });
     if (!open) return null;
 
-    return database.cashRegister.update({
-      where: { id: open.id },
+    const result = await database.cashRegister.updateMany({
+      where: { id: open.id, status: 'open' },
       data: {
         totalTransactions: { increment: 1 },
         ...(paymentMethod === 'cash'
@@ -208,5 +216,8 @@ export class CashRegistersController {
           : { cardSales: { increment: amount } })
       }
     });
+
+    if (result.count !== 1) return null;
+    return database.cashRegister.findUnique({ where: { id: open.id } });
   }
 }

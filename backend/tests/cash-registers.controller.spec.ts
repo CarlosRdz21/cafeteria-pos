@@ -7,14 +7,20 @@ const dbSimulado = vi.hoisted(() => ({
   obtenerMaximo: vi.fn(),
   crearCaja: vi.fn(),
   actualizarCaja: vi.fn(),
+  actualizarVariasCajas: vi.fn(),
+  buscarCajaPorId: vi.fn(),
+  ejecutarSql: vi.fn(),
   transaccion: vi.fn(),
 }));
 
 const clienteTransaccional = {
   cashRegister: {
     findFirst: dbSimulado.buscarPrimero,
+    findUnique: dbSimulado.buscarCajaPorId,
     create: dbSimulado.crearCaja,
+    updateMany: dbSimulado.actualizarVariasCajas,
   },
+  $executeRaw: dbSimulado.ejecutarSql,
 };
 
 vi.mock('../src/config/prisma', () => ({
@@ -25,7 +31,9 @@ vi.mock('../src/config/prisma', () => ({
       findMany: dbSimulado.buscarHistorial,
       aggregate: dbSimulado.obtenerMaximo,
       create: dbSimulado.crearCaja,
+      findUnique: dbSimulado.buscarCajaPorId,
       update: dbSimulado.actualizarCaja,
+      updateMany: dbSimulado.actualizarVariasCajas,
     },
   },
 }));
@@ -41,6 +49,7 @@ function crearRespuesta() {
 describe('CashRegistersController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    dbSimulado.ejecutarSql.mockResolvedValue(1);
     dbSimulado.transaccion.mockImplementation(
       async (operacion: (tx: unknown) => unknown) =>
         operacion(clienteTransaccional),
@@ -133,20 +142,65 @@ describe('CashRegistersController', () => {
     dbSimulado.buscarPrimero.mockResolvedValue({
       id: 4, openingAmount: 500, cashSales: 320, expenses: 70, status: 'open',
     });
-    dbSimulado.actualizarCaja.mockResolvedValue({ id: 4, status: 'closed' });
+    const cajaCerrada = {
+      id: 4,
+      closingAmount: 760,
+      expectedAmount: 750,
+      difference: 10,
+      status: 'closed',
+    };
+    dbSimulado.buscarCajaPorId.mockResolvedValue(cajaCerrada);
     const respuesta = crearRespuesta();
 
     await CashRegistersController.closeCurrent({ body: { closingAmount: 760 } } as Request, respuesta as unknown as Response);
 
-    expect(dbSimulado.actualizarCaja).toHaveBeenCalledWith({
-      where: { id: 4 },
-      data: expect.objectContaining({
-        closingAmount: 760,
-        expectedAmount: 750,
-        difference: 10,
-        status: 'closed',
-      }),
-    });
+    expect(dbSimulado.ejecutarSql).toHaveBeenCalledTimes(1);
+    expect(dbSimulado.buscarCajaPorId).toHaveBeenCalledWith({ where: { id: 4 } });
+    expect(respuesta.json).toHaveBeenCalledWith(cajaCerrada);
+  });
+
+  it('responde 404 cuando no existe una caja abierta para cerrar', async () => {
+    dbSimulado.buscarPrimero.mockResolvedValue(null);
+    const respuesta = crearRespuesta();
+
+    await CashRegistersController.closeCurrent(
+      { body: { closingAmount: 760 } } as Request,
+      respuesta as unknown as Response,
+    );
+
+    expect(respuesta.status).toHaveBeenCalledWith(404);
+    expect(dbSimulado.ejecutarSql).not.toHaveBeenCalled();
+  });
+
+  it('responde 404 cuando otra solicitud reclama primero el cierre', async () => {
+    dbSimulado.buscarPrimero.mockResolvedValue({ id: 4, status: 'open' });
+    dbSimulado.ejecutarSql.mockResolvedValue(0);
+    const respuesta = crearRespuesta();
+
+    await CashRegistersController.closeCurrent(
+      { body: { closingAmount: 760 } } as Request,
+      respuesta as unknown as Response,
+    );
+
+    expect(respuesta.status).toHaveBeenCalledWith(404);
+    expect(dbSimulado.buscarCajaPorId).not.toHaveBeenCalled();
+  });
+
+  it('delega un error Prisma durante el reclamo de cierre', async () => {
+    const errorInterno = new Error('fallo SQL al cerrar');
+    dbSimulado.buscarPrimero.mockResolvedValue({ id: 4, status: 'open' });
+    dbSimulado.ejecutarSql.mockRejectedValue(errorInterno);
+    const respuesta = crearRespuesta();
+    const siguiente = vi.fn();
+
+    await CashRegistersController.closeCurrent(
+      { body: { closingAmount: 760 } } as Request,
+      respuesta as unknown as Response,
+      siguiente,
+    );
+
+    expect(siguiente).toHaveBeenCalledWith(errorInterno);
+    expect(respuesta.json).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -156,19 +210,39 @@ describe('CashRegistersController', () => {
     const cliente = {
       cashRegister: {
         findFirst: vi.fn().mockResolvedValue({ id: 4 }),
-        update: vi.fn().mockResolvedValue({ id: 4 }),
+        findUnique: vi.fn().mockResolvedValue({ id: 4 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
 
     await CashRegistersController.applySaleToOpenRegister(metodo, 85, cliente);
 
-    expect(cliente.cashRegister.update).toHaveBeenCalledWith({
-      where: { id: 4 },
+    expect(cliente.cashRegister.updateMany).toHaveBeenCalledWith({
+      where: { id: 4, status: 'open' },
       data: {
         totalTransactions: { increment: 1 },
         [campo]: { increment: 85 },
       },
     });
+  });
+
+  it('no incrementa una caja que ya perdio el estado open', async () => {
+    const cliente = {
+      cashRegister: {
+        findFirst: vi.fn().mockResolvedValue({ id: 4 }),
+        findUnique: vi.fn(),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+
+    const resultado = await CashRegistersController.applySaleToOpenRegister(
+      'cash',
+      85,
+      cliente,
+    );
+
+    expect(resultado).toBeNull();
+    expect(cliente.cashRegister.findUnique).not.toHaveBeenCalled();
   });
 
   it('delega un error de persistencia al middleware central', async () => {

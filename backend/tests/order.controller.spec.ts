@@ -189,6 +189,47 @@ describe('OrderController', () => {
     expect(respuesta.json).not.toHaveBeenCalled();
   });
 
+  it('rechaza el pago sin emitir eventos cuando la caja pierde el estado open', async () => {
+    simulacion.buscarPedido.mockResolvedValue({
+      id: 8,
+      status: 'pending',
+      total: 80,
+    });
+    simulacion.actualizarPedidosCondicional.mockResolvedValue({ count: 1 });
+    simulacion.registrarPago.mockResolvedValue({ id: 4, orderId: 8 });
+    simulacion.registrarVenta.mockResolvedValue(null);
+    simulacion.transaccion.mockImplementation(
+      async (operacion: (tx: unknown) => unknown) =>
+        operacion({
+          order: {
+            update: simulacion.actualizarPedido,
+            updateMany: simulacion.actualizarPedidosCondicional,
+          },
+        }),
+    );
+    const respuesta = crearRespuesta();
+    const siguiente = vi.fn();
+
+    await OrderController.updateStatus(
+      {
+        params: { id: '8' },
+        body: {
+          status: 'completed',
+          paymentMethod: 'cash',
+          amountPaid: 80,
+        },
+      } as unknown as Request,
+      respuesta as unknown as Response,
+      siguiente,
+    );
+
+    expect(siguiente).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCode: 409, publicMessage: 'No hay caja abierta' }),
+    );
+    expect(simulacion.emitir).not.toHaveBeenCalled();
+    expect(respuesta.json).not.toHaveBeenCalled();
+  });
+
   it('cancela y notifica exactamente los tres destinos actuales', async () => {
     const pedido = { id: 8, status: 'cancelled' };
     simulacion.actualizarPedido.mockResolvedValue(pedido);

@@ -6,6 +6,7 @@ import { PaymentService } from '../payments/payment.service';
 import { CashRegistersController } from '../cash/cash-registers.controller';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '../../sockets/socket.constants';
 import { generarClaveFusionProductoPendiente } from './order.utils';
+import { ApplicationError } from '../../middlewares/error.middleware';
 
 
 
@@ -82,7 +83,14 @@ export class OrderController {
           paymentDetails,
           tx
         );
-        await CashRegistersController.applySaleToOpenRegister(paymentMethod, total, tx);
+        const cajaActualizada = await CashRegistersController.applySaleToOpenRegister(
+          paymentMethod,
+          total,
+          tx
+        );
+        if (!cajaActualizada) {
+          throw new ApplicationError(409, 'No open cash register for sale', 'No hay caja abierta');
+        }
       }
 
         return createdOrder;
@@ -199,11 +207,14 @@ export class OrderController {
             paymentDetails,
             tx
           );
-          await CashRegistersController.applySaleToOpenRegister(
+          const cajaActualizada = await CashRegistersController.applySaleToOpenRegister(
             paymentMethod,
             effectiveTotal,
             tx
           );
+          if (!cajaActualizada) {
+            throw new ApplicationError(409, 'No open cash register for sale', 'No hay caja abierta');
+          }
           return true;
         });
       } else {
