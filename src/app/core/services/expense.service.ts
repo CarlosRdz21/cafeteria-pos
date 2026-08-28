@@ -26,7 +26,12 @@ export class ExpenseService {
   }
 
   async crear(datosGasto: Omit<Expense, 'id'>): Promise<Expense> {
-    const gastoCreado = await firstValueFrom(this.http.post<Expense>(this.api, datosGasto));
+    const opciones = datosGasto.idempotencyKey
+      ? { headers: { 'Idempotency-Key': datosGasto.idempotencyKey } }
+      : undefined;
+    const gastoCreado = await firstValueFrom(
+      this.http.post<Expense>(this.api, datosGasto, opciones),
+    );
     return {
       ...gastoCreado,
       timestamp: gastoCreado?.timestamp ? new Date(gastoCreado.timestamp) : new Date()

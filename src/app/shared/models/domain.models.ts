@@ -103,6 +103,7 @@ export interface CashRegister {
 
 export interface Expense {
   id?: number;
+  idempotencyKey?: string;
   description?: string;
   concept?: string;
   amount: number;
