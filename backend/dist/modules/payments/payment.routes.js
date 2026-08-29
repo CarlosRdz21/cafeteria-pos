@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const payment_controller_1 = require("./payment.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const validation_middleware_1 = require("../../middlewares/validation.middleware");
+const router = (0, express_1.Router)();
+router.use((0, auth_middleware_1.authMiddleware)(['admin', 'barista', 'mesero', 'waiter']));
+router.post('/', validation_middleware_1.validateCreatePayment, payment_controller_1.PaymentController.create);
+router.post('/mercado-pago/preference', payment_controller_1.PaymentController.createMercadoPagoPreference);
+router.post('/mercado-pago/verify', payment_controller_1.PaymentController.verifyMercadoPagoPayment);
+router.post('/mercado-pago/point/order', (0, auth_middleware_1.authMiddleware)(['admin', 'barista']), payment_controller_1.PaymentController.createMercadoPagoPointOrder);
+router.get('/mercado-pago/point/order/:id', (0, auth_middleware_1.authMiddleware)(['admin', 'barista']), payment_controller_1.PaymentController.getMercadoPagoPointOrder);
+router.get('/reports', (0, auth_middleware_1.authMiddleware)(['admin', 'barista']), payment_controller_1.PaymentController.listByDate);
+exports.default = router;

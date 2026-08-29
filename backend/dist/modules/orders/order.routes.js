@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const order_controller_1 = require("../controllers/order.controller");
-const auth_middleware_1 = require("../middlewares/auth.middleware");
+const order_controller_1 = require("./order.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const validation_middleware_1 = require("../../middlewares/validation.middleware");
 const router = (0, express_1.Router)();
-router.post('/', order_controller_1.OrderController.create);
+router.use((0, auth_middleware_1.authMiddleware)(['admin', 'barista', 'mesero', 'waiter']));
+router.post('/', validation_middleware_1.validateCreateOrder, order_controller_1.OrderController.create);
 router.get('/', order_controller_1.OrderController.list);
 router.get('/:id', order_controller_1.OrderController.getById);
 router.put('/:id', order_controller_1.OrderController.replacePendingOrder);

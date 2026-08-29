@@ -1,19 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrderController = void 0;
-const order_service_1 = require("../services/order.service");
-const socket_1 = require("../socket");
-const prisma_1 = require("../prisma");
-const payment_service_1 = require("../services/payment.service");
-const cash_registers_controller_1 = require("./cash-registers.controller");
+const order_service_1 = require("./order.service");
+const socket_1 = require("../../sockets/socket");
+const prisma_1 = require("../../config/prisma");
+const payment_service_1 = require("../payments/payment.service");
+const cash_registers_controller_1 = require("../cash/cash-registers.controller");
+const socket_constants_1 = require("../../sockets/socket.constants");
+const order_utils_1 = require("./order.utils");
+const error_middleware_1 = require("../../middlewares/error.middleware");
 class OrderController {
-    static getPendingItemMergeKey(item) {
-        const productId = Number(item.productId || 0);
-        const name = String(item.name || '').trim();
-        const price = Number(item.price || 0).toFixed(2);
-        return `${productId}::${name}::${price}`;
-    }
-    static async create(req, res) {
+    static async create(req, res, next) {
         try {
             const { items, status, paymentMethod, amountPaid, paymentDetails, discountTotal, appliedPromotions, tableNumber, customerName, notes } = req.body;
             if (!items || items.length === 0) {
@@ -58,37 +55,44 @@ class OrderController {
                 // Si la orden ya estÃ¡ completada, registrar el pago para que aparezca en reportes
                 if (requestedStatus === 'completed') {
                     await payment_service_1.PaymentService.registerPayment(createdOrder.id, paymentMethod, paymentMethod === 'cash' ? amountPaid : undefined, paymentDetails, tx);
-                    await cash_registers_controller_1.CashRegistersController.applySaleToOpenRegister(paymentMethod, total, tx);
+                    const cajaActualizada = await cash_registers_controller_1.CashRegistersController.applySaleToOpenRegister(paymentMethod, total, tx);
+                    if (!cajaActualizada) {
+                        throw new error_middleware_1.ApplicationError(409, 'No open cash register for sale', 'No hay caja abierta');
+                    }
                 }
                 return createdOrder;
             });
             if (requestedStatus === 'pending') {
                 const io = (0, socket_1.getIO)();
-                io.to('baristas').emit('new-order', order);
-                io.to('admins').emit('new-order', order);
+                io.to(socket_constants_1.SOCKET_ROOMS.baristas).emit(socket_constants_1.SOCKET_EVENTS.newOrder, order);
+                io.to(socket_constants_1.SOCKET_ROOMS.admins).emit(socket_constants_1.SOCKET_EVENTS.newOrder, order);
             }
             res.status(201).json(order);
         }
         catch (error) {
-            console.error('❌ Error creating order:', error);
-            res.status(500).json({ error: error.message });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
-    static async list(req, res) {
+    static async list(req, res, next) {
         try {
             const status = req.query.status;
             if (!status) {
                 return res.status(400).json({ error: 'Status is required' });
             }
-            const orders = await order_service_1.OrderService.getOrdersByStatus(status);
+            const orders = await order_service_1.OrderService.obtenerPedidosPorEstado(status);
             res.json(orders);
         }
         catch (error) {
-            console.error('❌ Error listing orders:', error);
-            res.status(500).json({ error: 'Failed to list orders' });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
-    static async updateStatus(req, res) {
+    static async updateStatus(req, res, next) {
         try {
             const orderId = Number(req.params.id);
             const { status, paymentMethod, amountPaid, items, paymentDetails, discountTotal, appliedPromotions } = req.body;
@@ -99,6 +103,7 @@ class OrderController {
             if (!existingOrder) {
                 return res.status(404).json({ error: 'Orden no encontrada' });
             }
+            let emitirActualizacion = true;
             if (status === 'completed') {
                 if (existingOrder.status === 'completed') {
                     const completedOrder = await prisma_1.prisma.order.findUnique({
@@ -107,32 +112,6 @@ class OrderController {
                     });
                     return res.json(completedOrder);
                 }
-                let effectiveTotal = existingOrder.total;
-                if (Array.isArray(items) && items.length > 0) {
-                    const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
-                    const tax = 0;
-                    effectiveTotal = subtotal + tax;
-                    await prisma_1.prisma.order.update({
-                        where: { id: orderId },
-                        data: {
-                            subtotal,
-                            tax,
-                            total: effectiveTotal,
-                            discountTotal: Number(discountTotal || 0),
-                            appliedPromotions: appliedPromotions ?? null,
-                            items: {
-                                deleteMany: {},
-                                create: items.map((item) => ({
-                                    productId: item.productId,
-                                    name: item.name,
-                                    quantity: item.quantity,
-                                    price: item.price,
-                                    subtotal: Number(item.price || 0) * Number(item.quantity || 0)
-                                }))
-                            }
-                        }
-                    });
-                }
                 if (!paymentMethod) {
                     return res.status(400).json({ error: 'Payment method required' });
                 }
@@ -140,10 +119,49 @@ class OrderController {
                 if (paymentMethod === 'cash' && (amountPaid === undefined || amountPaid === null)) {
                     return res.status(400).json({ error: 'amountPaid required for cash payments' });
                 }
-                await payment_service_1.PaymentService.registerPayment(orderId, paymentMethod, paymentMethod === 'cash' ? amountPaid : undefined, paymentDetails);
-                if (existingOrder.status !== 'completed') {
-                    await cash_registers_controller_1.CashRegistersController.applySaleToOpenRegister(paymentMethod, effectiveTotal);
-                }
+                emitirActualizacion = await prisma_1.prisma.$transaction(async (tx) => {
+                    const reclamo = await tx.order.updateMany({
+                        where: {
+                            id: orderId,
+                            status: { not: 'completed' }
+                        },
+                        data: { status: 'completed' }
+                    });
+                    if (reclamo.count !== 1)
+                        return false;
+                    let effectiveTotal = existingOrder.total;
+                    if (Array.isArray(items) && items.length > 0) {
+                        const subtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+                        const tax = 0;
+                        effectiveTotal = subtotal + tax;
+                        await tx.order.update({
+                            where: { id: orderId },
+                            data: {
+                                subtotal,
+                                tax,
+                                total: effectiveTotal,
+                                discountTotal: Number(discountTotal || 0),
+                                appliedPromotions: appliedPromotions ?? null,
+                                items: {
+                                    deleteMany: {},
+                                    create: items.map((item) => ({
+                                        productId: item.productId,
+                                        name: item.name,
+                                        quantity: item.quantity,
+                                        price: item.price,
+                                        subtotal: Number(item.price || 0) * Number(item.quantity || 0)
+                                    }))
+                                }
+                            }
+                        });
+                    }
+                    await payment_service_1.PaymentService.registerPayment(orderId, paymentMethod, paymentMethod === 'cash' ? amountPaid : undefined, paymentDetails, tx);
+                    const cajaActualizada = await cash_registers_controller_1.CashRegistersController.applySaleToOpenRegister(paymentMethod, effectiveTotal, tx);
+                    if (!cajaActualizada) {
+                        throw new error_middleware_1.ApplicationError(409, 'No open cash register for sale', 'No hay caja abierta');
+                    }
+                    return true;
+                });
             }
             else {
                 if (status === 'pending' && Array.isArray(items) && items.length > 0) {
@@ -156,7 +174,7 @@ class OrderController {
                     }
                     const mergedItemsMap = new Map();
                     for (const item of pendingOrder.items) {
-                        mergedItemsMap.set(OrderController.getPendingItemMergeKey(item), {
+                        mergedItemsMap.set((0, order_utils_1.generarClaveFusionProductoPendiente)(item), {
                             productId: item.productId,
                             name: item.name,
                             quantity: item.quantity,
@@ -165,7 +183,7 @@ class OrderController {
                         });
                     }
                     for (const item of items) {
-                        const mergeKey = OrderController.getPendingItemMergeKey(item);
+                        const mergeKey = (0, order_utils_1.generarClaveFusionProductoPendiente)(item);
                         const existing = mergedItemsMap.get(mergeKey);
                         if (existing) {
                             existing.quantity += item.quantity;
@@ -219,18 +237,22 @@ class OrderController {
             if (!updatedOrder) {
                 return res.status(404).json({ error: 'Orden no encontrada' });
             }
-            const io = (0, socket_1.getIO)();
-            io.to('waiters').emit('order-updated', updatedOrder);
-            io.to('baristas').emit('order-updated', updatedOrder);
-            io.to('admins').emit('order-updated', updatedOrder);
+            if (emitirActualizacion) {
+                const io = (0, socket_1.getIO)();
+                io.to(socket_constants_1.SOCKET_ROOMS.waiters).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, updatedOrder);
+                io.to(socket_constants_1.SOCKET_ROOMS.baristas).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, updatedOrder);
+                io.to(socket_constants_1.SOCKET_ROOMS.admins).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, updatedOrder);
+            }
             res.json(updatedOrder);
         }
         catch (error) {
-            console.error('❌ Error updating order:', error);
-            res.status(500).json({ error: error.message });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
-    static async replacePendingOrder(req, res) {
+    static async replacePendingOrder(req, res, next) {
         try {
             const orderId = Number(req.params.id);
             const items = Array.isArray(req.body?.items) ? req.body.items : [];
@@ -275,16 +297,18 @@ class OrderController {
                 }
             });
             const io = (0, socket_1.getIO)();
-            io.to('waiters').emit('order-updated', updatedOrder);
-            io.to('admins').emit('order-updated', updatedOrder);
+            io.to(socket_constants_1.SOCKET_ROOMS.waiters).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, updatedOrder);
+            io.to(socket_constants_1.SOCKET_ROOMS.admins).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, updatedOrder);
             res.json(updatedOrder);
         }
         catch (error) {
-            console.error('❌ Error replacing pending order items:', error);
-            res.status(500).json({ error: error.message });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
-    static async cancel(req, res) {
+    static async cancel(req, res, next) {
         try {
             const orderId = Number(req.params.id);
             if (!orderId) {
@@ -296,17 +320,19 @@ class OrderController {
             });
             // 🔔 Notificar por socket
             const io = (0, socket_1.getIO)();
-            io.to('baristas').emit('order-cancelled', order.id);
-            io.to('waiters').emit('order-updated', order);
-            io.to('admins').emit('order-updated', order);
+            io.to(socket_constants_1.SOCKET_ROOMS.baristas).emit(socket_constants_1.SOCKET_EVENTS.orderCancelled, order.id);
+            io.to(socket_constants_1.SOCKET_ROOMS.waiters).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, order);
+            io.to(socket_constants_1.SOCKET_ROOMS.admins).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, order);
             res.json(order);
         }
         catch (error) {
-            console.error('❌ Error cancelling order:', error);
-            res.status(500).json({ error: 'Error cancelling order' });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
-    static async remove(req, res) {
+    static async remove(req, res, next) {
         try {
             const orderId = Number(req.params.id);
             if (!orderId) {
@@ -356,17 +382,19 @@ class OrderController {
                 return res.status(404).json({ error: 'Orden no encontrada' });
             }
             const io = (0, socket_1.getIO)();
-            io.to('baristas').emit('order-cancelled', deletedOrder.id);
-            io.to('waiters').emit('order-updated', { ...deletedOrder, status: 'deleted' });
-            io.to('admins').emit('order-updated', { ...deletedOrder, status: 'deleted' });
+            io.to(socket_constants_1.SOCKET_ROOMS.baristas).emit(socket_constants_1.SOCKET_EVENTS.orderCancelled, deletedOrder.id);
+            io.to(socket_constants_1.SOCKET_ROOMS.waiters).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, { ...deletedOrder, status: 'deleted' });
+            io.to(socket_constants_1.SOCKET_ROOMS.admins).emit(socket_constants_1.SOCKET_EVENTS.orderUpdated, { ...deletedOrder, status: 'deleted' });
             res.json(deletedOrder);
         }
         catch (error) {
-            console.error('âŒ Error deleting order:', error);
-            res.status(500).json({ error: error.message || 'Error deleting order' });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
-    static async getById(req, res) {
+    static async getById(req, res, next) {
         try {
             const orderId = Number(req.params.id);
             const order = await prisma_1.prisma.order.findUnique({
@@ -381,8 +409,10 @@ class OrderController {
             res.json(order);
         }
         catch (error) {
-            console.error('❌ Error getting order:', error);
-            res.status(500).json({ error: error.message });
+            if (next)
+                next(error);
+            else
+                throw error;
         }
     }
 }

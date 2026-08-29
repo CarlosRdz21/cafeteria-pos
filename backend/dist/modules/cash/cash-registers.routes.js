@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const cash_registers_controller_1 = require("./cash-registers.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+router.use((0, auth_middleware_1.authMiddleware)(['admin', 'barista']));
+router.get('/current', cash_registers_controller_1.CashRegistersController.current);
+router.get('/', cash_registers_controller_1.CashRegistersController.history);
+router.post('/open', cash_registers_controller_1.CashRegistersController.open);
+router.post('/current/close', cash_registers_controller_1.CashRegistersController.closeCurrent);
+router.post('/current/record-sale', cash_registers_controller_1.CashRegistersController.recordSaleCurrent);
+router.post('/current/record-expense', cash_registers_controller_1.CashRegistersController.recordExpenseCurrent);
+exports.default = router;

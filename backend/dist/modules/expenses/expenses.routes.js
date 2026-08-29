@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const expenses_controller_1 = require("../controllers/expenses.controller");
-const auth_middleware_1 = require("../middlewares/auth.middleware");
+const expenses_controller_1 = require("./expenses.controller");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
 const router = (0, express_1.Router)();
+router.use((0, auth_middleware_1.authMiddleware)(['admin', 'barista']));
 router.get('/', expenses_controller_1.ExpensesController.list);
 router.post('/', expenses_controller_1.ExpensesController.create);
 router.delete('/:id', (0, auth_middleware_1.authMiddleware)(['admin']), expenses_controller_1.ExpensesController.remove);
