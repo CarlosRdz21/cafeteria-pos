@@ -118,7 +118,7 @@ model OrderItem {
   price     Float
   quantity  Int
   subtotal  Float
-  orderId   Int   @unique
+  orderId   Int
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
