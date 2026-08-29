@@ -24,6 +24,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 @Component({
   selector: 'app-cash-register',
   standalone: true,
+  styleUrl: './cash-register.component.scss',
   imports: [
     CommonModule,
     FormsModule,
@@ -40,7 +41,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
     BlankZeroNumberDirective
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
@@ -50,7 +51,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
         <mat-icon>logout</mat-icon>
         <span>Cerrar sesión</span>
       </button>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="cash-register-container">
       <mat-tab-group [(selectedIndex)]="selectedTab">
@@ -170,8 +171,8 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
                     \${{calculateExpectedCash().toFixed(2)}}
                   </div>
                   <div class="expected-breakdown">
-                    Inicial (\${{currentRegister.openingAmount.toFixed(2)}}) + 
-                    Ventas (\${{currentRegister.cashSales.toFixed(2)}}) - 
+                    Inicial (\${{currentRegister.openingAmount.toFixed(2)}}) +
+                    Ventas (\${{currentRegister.cashSales.toFixed(2)}}) -
                     Gastos (\${{currentRegister.expenses.toFixed(2)}})
                   </div>
                 </div>
@@ -199,7 +200,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
               </mat-card-header>
               <mat-card-content>
                 <div class="history-list" *ngIf="history.length > 0; else noHistory">
-                  <mat-card 
+                  <mat-card
                     *ngFor="let register of history"
                     class="history-card"
                     [class.open]="register.status === 'open'"
@@ -209,7 +210,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
                         <mat-icon>calendar_today</mat-icon>
                         {{formatDate(register.openedAt)}}
                       </div>
-                      <span 
+                      <span
                         class="status-badge"
                         [class.open]="register.status === 'open'"
                         [class.closed]="register.status === 'closed'"
@@ -251,7 +252,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
                           <span>Contado:</span>
                           <span>\${{register.closingAmount?.toFixed(2)}}</span>
                         </div>
-                        <div 
+                        <div
                           class="detail-row difference"
                           [class.positive]="(register.difference || 0) >= 0"
                           [class.negative]="(register.difference || 0) < 0"
@@ -295,7 +296,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
           <mat-card-content>
             <div class="close-info">
               <p>Cuenta el dinero en efectivo que tienes en la caja</p>
-              
+
               <div class="expected-info">
                 <span>Se espera:</span>
                 <span class="amount">\${{calculateExpectedCash().toFixed(2)}}</span>
@@ -318,7 +319,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
               <span matPrefix>$&nbsp;</span>
             </mat-form-field>
 
-            <div 
+            <div
               class="difference-display"
               *ngIf="closingAmount > 0"
               [class.positive]="difference >= 0"
@@ -345,9 +346,9 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
               mat-raised-button
               color="primary"
               (click)="confirmClose(true)"
-              [disabled]="closingAmount <= 0"
+              [disabled]="closingAmount <= 0 || cerrandoCaja"
             >
-              Cerrar e imprimir corte
+              {{ cerrandoCaja ? 'Cerrando...' : 'Cerrar e imprimir corte' }}
             </button>
           </mat-card-actions>
         </mat-card>
@@ -509,7 +510,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
     .expected-cash {
       margin: 24px 0;
       padding: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--color-primary);
       color: white;
       border-radius: 12px;
       text-align: center;
@@ -745,12 +746,13 @@ export class CashRegisterComponent implements OnInit, OnDestroy {
   currentRegister: CashRegister | null = null;
   history: CashRegister[] = [];
   currentUser: User | null = null;
-  
+
   openingAmount = 0;
   closingAmount = 0;
   difference = 0;
-  
+
   showingCloseDialog = false;
+  cerrandoCaja = false;
   selectedTab = 0;
   private readonly destroy$ = new Subject<void>();
 
@@ -800,7 +802,7 @@ export class CashRegisterComponent implements OnInit, OnDestroy {
       });
       await this.loadData();
       this.openingAmount = 0;
-      
+
       // Redirigir al POS
       setTimeout(() => {
         this.router.navigate(['/pos']);
@@ -819,13 +821,14 @@ export class CashRegisterComponent implements OnInit, OnDestroy {
   }
 
   cancelClose() {
+    if (this.cerrandoCaja) return;
     this.showingCloseDialog = false;
   }
 
   calculateExpectedCash(): number {
     if (!this.currentRegister) return 0;
-    return this.currentRegister.openingAmount + 
-           this.currentRegister.cashSales - 
+    return this.currentRegister.openingAmount +
+           this.currentRegister.cashSales -
            this.currentRegister.expenses;
   }
 
@@ -834,6 +837,8 @@ export class CashRegisterComponent implements OnInit, OnDestroy {
   }
 
   async confirmClose(printCut: boolean = true) {
+    if (this.cerrandoCaja) return;
+
     if (this.closingAmount <= 0) {
       this.snackBar.open('Ingresa el monto contado', 'Cerrar', {
         duration: 3000
@@ -852,26 +857,31 @@ export class CashRegisterComponent implements OnInit, OnDestroy {
         }
       : null;
 
-    const success = await this.cashRegisterService.closeRegister(this.closingAmount);
+    this.cerrandoCaja = true;
+    try {
+      const success = await this.cashRegisterService.closeRegister(this.closingAmount);
 
-    if (success) {
-      if (printCut && registerSnapshot) {
-        const printed = await this.printerService.printCashClosure(registerSnapshot);
-        this.snackBar.open(
-          printed ? 'Caja cerrada e impresión de corte enviada' : 'Caja cerrada, pero no se pudo imprimir el corte',
-          'Cerrar',
-          { duration: 3000 }
-        );
+      if (success) {
+        if (printCut && registerSnapshot) {
+          const printed = await this.printerService.printCashClosure(registerSnapshot);
+          this.snackBar.open(
+            printed ? 'Caja cerrada e impresión de corte enviada' : 'Caja cerrada, pero no se pudo imprimir el corte',
+            'Cerrar',
+            { duration: 3000 }
+          );
+        } else {
+          this.snackBar.open('Caja cerrada exitosamente', 'Cerrar', { duration: 2000 });
+        }
+        this.showingCloseDialog = false;
+        await this.loadData();
+        this.selectedTab = 1; // Mostrar historial
       } else {
-        this.snackBar.open('Caja cerrada exitosamente', 'Cerrar', { duration: 2000 });
+        this.snackBar.open('Error al cerrar caja', 'Cerrar', {
+          duration: 3000
+        });
       }
-      this.showingCloseDialog = false;
-      await this.loadData();
-      this.selectedTab = 1; // Mostrar historial
-    } else {
-      this.snackBar.open('Error al cerrar caja', 'Cerrar', {
-        duration: 3000
-      });
+    } finally {
+      this.cerrandoCaja = false;
     }
   }
 
@@ -908,5 +918,4 @@ export class CashRegisterComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 }
-
 

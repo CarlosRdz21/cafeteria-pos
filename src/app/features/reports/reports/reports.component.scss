@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100%;
-  color: var(--color-texto);
+  color: var(--color-text-on-light);
   background: var(--color-fondo);
 }
 
@@ -23,9 +23,7 @@
 :host ::ng-deep .reports-container {
   min-height: calc(100dvh - var(--topbar-altura) - 68px);
   padding: clamp(16px, 2.5vw, 30px);
-  background:
-    radial-gradient(circle at 88% 0%, rgba(196, 139, 79, 0.09), transparent 30rem),
-    var(--color-fondo);
+  background: var(--color-fondo);
 }
 
 :host ::ng-deep .filters-card {
@@ -62,11 +60,11 @@
 }
 
 :host ::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label {
-  color: var(--color-caramelo-claro);
+  color: var(--color-primary);
 }
 
 :host ::ng-deep .mat-mdc-tab .mdc-tab-indicator__content--underline {
-  border-color: var(--color-caramelo) !important;
+  border-color: var(--color-accent) !important;
 }
 
 :host ::ng-deep .tab-content {
@@ -83,21 +81,10 @@
   min-height: 108px;
   overflow: hidden;
   color: var(--color-texto);
-  background: linear-gradient(145deg, var(--color-superficie-elevada), var(--color-superficie));
+  background: var(--color-superficie-elevada);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-lg);
   box-shadow: var(--sombra-sm);
-}
-
-:host ::ng-deep .kpi-card::after {
-  content: '';
-  position: absolute;
-  right: -34px;
-  bottom: -48px;
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: rgba(196, 139, 79, 0.07);
 }
 
 :host ::ng-deep .kpi-card mat-icon {
@@ -107,8 +94,18 @@
   width: 30px;
   height: 30px;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--color-superficie-elevada);
 }
+
+:host ::ng-deep .kpi-card.total-sales mat-icon,
+:host ::ng-deep .kpi-card.cash-sales mat-icon,
+:host ::ng-deep .kpi-card.net-profit mat-icon { color: var(--color-exito); }
+:host ::ng-deep .kpi-card.total-orders mat-icon { color: var(--color-primary); }
+:host ::ng-deep .kpi-card.average-ticket mat-icon { color: var(--color-caramelo-claro); }
+:host ::ng-deep .kpi-card.card-sales mat-icon { color: var(--color-info); }
+:host ::ng-deep .kpi-card.promotion-sales mat-icon { color: var(--color-accent); }
+:host ::ng-deep .kpi-card.promotion-discount mat-icon { color: var(--color-warning); }
+:host ::ng-deep .kpi-card.total-expenses mat-icon { color: var(--color-error); }
 
 :host ::ng-deep .kpi-label,
 :host ::ng-deep .mini-caption,
@@ -126,7 +123,7 @@
 
 :host ::ng-deep .kpi-card.total-sales .kpi-value,
 :host ::ng-deep .kpi-card.net-profit .kpi-value {
-  color: var(--color-caramelo-claro);
+  color: var(--color-exito);
 }
 
 :host ::ng-deep .chart-card,
@@ -140,7 +137,7 @@
 }
 
 :host ::ng-deep mat-card-title {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-weight: 740;
 }
 
@@ -155,19 +152,19 @@
 }
 
 :host ::ng-deep .finance-summary-item.income strong,
-:host ::ng-deep .mini-highlight { color: #83bce8; }
-:host ::ng-deep .finance-summary-item.expenses strong { color: #ef9292; }
+:host ::ng-deep .mini-highlight { color: var(--color-info); }
+:host ::ng-deep .finance-summary-item.expenses strong { color: var(--color-error); }
 :host ::ng-deep .finance-summary-item.profit strong,
 :host ::ng-deep .finance-summary-item.margin strong,
-:host ::ng-deep .mini-total { color: #75c99a; }
-:host ::ng-deep .promotion-kpi strong { color: var(--color-caramelo-claro); }
+:host ::ng-deep .mini-total { color: var(--color-exito); }
+:host ::ng-deep .promotion-kpi strong { color: var(--color-accent); }
 
 :host ::ng-deep .bar.cash {
-  background: linear-gradient(to top, #387c58, #75c99a);
+  background: var(--color-exito);
 }
 
 :host ::ng-deep .bar.card {
-  background: linear-gradient(to top, #396d93, #83bce8);
+  background: var(--color-info);
 }
 
 :host ::ng-deep .bar-value,
@@ -176,42 +173,46 @@
 }
 
 :host ::ng-deep .weekday-col-bar {
-  background: linear-gradient(to top, var(--color-caramelo), var(--color-caramelo-claro));
+  background: var(--color-caramelo);
   border-radius: 5px 5px 0 0;
 }
 
 :host ::ng-deep .hour-grid-line {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: rgba(37, 33, 29, 0.16);
 }
 
 :host ::ng-deep .hour-line-path {
-  stroke: var(--color-caramelo-claro);
+  stroke: var(--color-primary);
 }
 
 :host ::ng-deep .hour-line-dot {
   fill: var(--color-superficie);
-  stroke: var(--color-caramelo-claro);
+  stroke: var(--color-primary);
 }
 
 :host ::ng-deep .rank-index,
 :host ::ng-deep .rank {
-  color: var(--color-crema);
-  background: rgba(196, 139, 79, 0.17);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
 }
 
 :host ::ng-deep .rank-track,
 :host ::ng-deep .expense-track {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-divider);
 }
 
 :host ::ng-deep .rank-fill,
 :host ::ng-deep .expense-fill {
-  background: linear-gradient(90deg, var(--color-caramelo), var(--color-caramelo-claro));
+  background: var(--color-caramelo);
+}
+
+:host ::ng-deep .expense-fill {
+  background: var(--color-error);
 }
 
 :host ::ng-deep .quantity-badge {
-  color: #bce8ce;
-  background: rgba(58, 148, 101, 0.16);
+  color: var(--color-exito);
+  background: rgba(62, 122, 87, 0.1);
 }
 
 :host ::ng-deep .total-amount,
@@ -230,11 +231,11 @@
 }
 
 :host ::ng-deep .mat-mdc-header-row {
-  background: rgba(196, 139, 79, 0.1);
+  background: var(--color-primary-soft);
 }
 
 :host ::ng-deep .mat-mdc-header-cell {
-  color: var(--color-beige);
+  color: var(--color-primary);
   border-bottom-color: var(--color-borde-fuerte);
   font-weight: 750;
 }
@@ -258,18 +259,18 @@
 }
 
 :host ::ng-deep .payment-method.cash {
-  color: #bce8ce;
+  color: var(--color-exito);
   background: rgba(58, 148, 101, 0.16);
 }
 
 :host ::ng-deep .payment-method.card {
-  color: #b9dcf5;
+  color: var(--color-info);
   background: rgba(71, 145, 199, 0.16);
 }
 
 :host ::ng-deep .sale-promo,
 :host ::ng-deep .sale-promo-entry {
-  color: #ffd9aa;
+  color: #855315;
   background: rgba(214, 143, 67, 0.13);
   border: 1px solid rgba(214, 143, 67, 0.26);
 }
@@ -288,7 +289,7 @@
 }
 
 :host ::ng-deep .empty-state mat-icon {
-  color: var(--color-caramelo);
+  color: var(--color-primary);
 }
 
 @media (max-width: 900px) {

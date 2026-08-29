@@ -9,7 +9,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { Subscription, firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { PendingOrdersService } from '../../../core/services/pending-orders.service';
 import { Order, OrderItem, Product } from '../../../shared/models/domain.models';
 import { format } from 'date-fns';
@@ -28,6 +28,7 @@ import {
 @Component({
   selector: 'app-pending-orders',
   standalone: true,
+  styleUrl: './pending-orders.component.scss',
   imports: [
     CommonModule,
     MatToolbarModule,
@@ -242,7 +243,7 @@ import {
     .order-total {
       display: flex;
       justify-content: space-between;
-      background: linear-gradient(135deg, #667eea, #764ba2);
+      background: var(--color-primary);
       color: white;
       padding: 12px;
       border-radius: 8px;
@@ -621,13 +622,14 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
 
     .dialog-header h2 {
       margin: 0 0 6px;
+      color: var(--color-primary);
       font-size: 28px;
       font-weight: 700;
     }
 
     .dialog-header p {
       margin: 0;
-      color: rgba(0,0,0,.68);
+      color: var(--color-text-secondary);
     }
 
     .item-list {
@@ -643,9 +645,9 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
       align-items: center;
       gap: 16px;
       padding: 14px 16px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--color-border);
       border-radius: 14px;
-      background: #fafafa;
+      background: var(--color-surface);
     }
 
     .item-main {
@@ -653,13 +655,14 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
     }
 
     .item-name {
+      color: var(--color-primary);
       font-size: 18px;
       font-weight: 600;
       margin-bottom: 4px;
     }
 
     .item-price {
-      color: rgba(0,0,0,.65);
+      color: var(--color-text-secondary);
       font-size: 14px;
     }
 
@@ -690,11 +693,17 @@ export class PendingOrdersComponent implements OnInit, OnDestroy {
       margin-top: 18px;
       padding: 16px;
       border-radius: 14px;
-      background: linear-gradient(135deg, #eff6ff, #eef2ff);
+      color: var(--color-text-primary);
+      background: var(--color-surface);
+      border: 1px solid var(--color-accent);
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 18px;
+    }
+
+    .summary-box strong {
+      color: var(--color-primary);
     }
 
     .dialog-actions {

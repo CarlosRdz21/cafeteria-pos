@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -38,6 +38,7 @@ export function calcularMontosSugeridos(total: number): number[] {
 @Component({
   selector: 'app-checkout',
   standalone: true,
+  styleUrl: './checkout.component.scss',
   imports: [
     CommonModule,
     FormsModule,
@@ -65,7 +66,7 @@ export function calcularMontosSugeridos(total: number): number[] {
           </mat-card-title>
         </mat-card-header>
 
-        <mat-card-content>
+        <mat-card-content class="checkout-content">
           <!-- Resumen de la orden -->
           <div class="order-summary">
             <h3>Resumen de la Orden</h3>
@@ -78,7 +79,7 @@ export function calcularMontosSugeridos(total: number): number[] {
 
             <div class="promotion-summary" *ngIf="pricingSummary.appliedPromotions.length">
               <div class="promotion-item" *ngFor="let promotion of pricingSummary.appliedPromotions">
-                <span>{{ promotion.promotionName }}</span>
+                <span>Descuento de Promoción: {{ promotion.promotionName }}</span>
                 <strong>- \${{promotion.discountTotal.toFixed(2)}}</strong>
               </div>
             </div>
@@ -104,8 +105,7 @@ export function calcularMontosSugeridos(total: number): number[] {
           <!-- Selección de método de pago -->
           <mat-button-toggle-group
             [(ngModel)]="paymentMethod"
-            class="full-width"
-            style="margin-bottom: 20px; display: flex; justify-content: center;"
+            class="full-width payment-selector"
           >
             <mat-button-toggle value="cash">
               <mat-icon>payments</mat-icon>
@@ -158,10 +158,18 @@ export function calcularMontosSugeridos(total: number): number[] {
               </button>
             </div>
 
-            <div class="change-display" *ngIf="change >= 0">
-              <div class="change-label">Cambio:</div>
-              <div class="change-amount" [class.insufficient]="change < 0">
-                \${{change.toFixed(2)}}
+            <div class="cash-summary" *ngIf="change >= 0">
+              <div class="cash-summary-item">
+                <span>Total a pagar</span>
+                <strong>\${{ totals.total.toFixed(2) }}</strong>
+              </div>
+              <div class="cash-summary-item cash-change">
+                <span>Cambio</span>
+                <strong>\${{ change.toFixed(2) }}</strong>
+              </div>
+              <div class="cash-summary-item">
+                <span>Método</span>
+                <strong>Efectivo</strong>
               </div>
             </div>
 
@@ -216,27 +224,26 @@ export function calcularMontosSugeridos(total: number): number[] {
               </div>
             </div>
 
-            <button
-              mat-raised-button
-              color="primary"
-              class="full-width"
-              (click)="startMercadoPagoPointFlow()"
-              [disabled]="processingCard || cardApproved"
-            >
-              {{ processingCard ? 'Esperando terminal...' : (cardApproved ? 'Pago aprobado' : 'Enviar a terminal MP' ) }}
-            </button>
+            <div class="card-payment-actions">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="startMercadoPagoPointFlow()"
+                [disabled]="processingCard || cardApproved"
+              >
+                {{ processingCard ? 'Esperando terminal...' : (cardApproved ? 'Pago aprobado' : 'Enviar a terminal MP' ) }}
+              </button>
 
-            <button
-              mat-stroked-button
-              class="full-width"
-              style="margin-top: 10px;"
-              (click)="confirmManualCardPayment()"
-              [disabled]="processingCard || cardApproved"
-            >
-              Confirmar cobro manual con tarjeta
-            </button>
+              <button
+                mat-stroked-button
+                (click)="confirmManualCardPayment()"
+                [disabled]="processingCard || cardApproved"
+              >
+                Confirmar cobro manual con tarjeta
+              </button>
+            </div>
 
-            <div class="warning" *ngIf="mpPointStatusMessage" style="margin-top: 10px;">
+            <div class="warning card-status-message" *ngIf="mpPointStatusMessage">
               <mat-icon>info</mat-icon>
               {{ mpPointStatusMessage }}
             </div>
@@ -254,10 +261,12 @@ export function calcularMontosSugeridos(total: number): number[] {
           <button
             mat-raised-button
             color="primary"
+            class="complete-payment-button"
             (click)="completePayment()"
             [disabled]="!canComplete() || processing"
           >
-            {{ processing ? 'Procesando...' : 'Completar Pago' }}
+            <mat-icon *ngIf="!processing">lock</mat-icon>
+            {{ processing ? 'Procesando...' : (paymentMethod === 'card' ? 'Confirmar Pago con Tarjeta' : 'Completar Pago') }}
             <mat-spinner diameter="20" *ngIf="processing"></mat-spinner>
           </button>
         </mat-card-actions>
@@ -266,24 +275,29 @@ export function calcularMontosSugeridos(total: number): number[] {
   `,
   styles: [`
     .checkout-container {
-      min-height: var(--app-viewport-height);
-      background-color: #f5f5f5;
-      padding: 20px 20px calc(24px + var(--app-safe-bottom));
+      height: calc(var(--app-viewport-height) - var(--topbar-altura));
+      min-height: 0;
+      padding: 12px 16px;
       display: flex;
       justify-content: center;
       align-items: flex-start;
+      box-sizing: border-box;
     }
 
     .checkout-card {
       width: 100%;
-      max-width: 600px;
+      max-width: 1180px;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
     }
 
     mat-card-header {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 20px;
+      margin-bottom: 0;
+      flex: 0 0 auto;
     }
 
     mat-card-title {
@@ -292,32 +306,35 @@ export function calcularMontosSugeridos(total: number): number[] {
     }
 
     .order-summary {
-      background-color: #fafafa;
-      padding: 16px;
+      padding: 12px 14px;
       border-radius: 8px;
-      margin-bottom: 24px;
+      margin-bottom: 10px;
     }
 
     .order-summary h3 {
-      margin: 0 0 16px 0;
-      font-size: 18px;
+      margin: 0 0 8px 0;
+      font-size: 16px;
     }
 
     .summary-items {
-      margin-bottom: 16px;
+      max-height: clamp(64px, 13dvh, 118px);
+      margin-bottom: 8px;
+      padding-right: 4px;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
     }
 
     .promotion-summary {
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
     }
 
     .summary-item {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      padding: 4px 0;
       font-size: 14px;
     }
 
@@ -326,7 +343,7 @@ export function calcularMontosSugeridos(total: number): number[] {
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      padding: 8px 12px;
+      padding: 5px 9px;
       background: #e8f5e9;
       border-radius: 8px;
       color: #1b5e20;
@@ -334,23 +351,23 @@ export function calcularMontosSugeridos(total: number): number[] {
     }
 
     .summary-totals {
-      margin-top: 16px;
+      margin-top: 6px;
     }
 
     .total-row {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      padding: 3px 0;
       font-size: 14px;
     }
 
     .total-row.total {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 600;
       color: #4caf50;
       border-top: 2px solid #4caf50;
-      margin-top: 8px;
-      padding-top: 12px;
+      margin-top: 4px;
+      padding-top: 7px;
     }
 
     .total-row.discount {
@@ -359,15 +376,16 @@ export function calcularMontosSugeridos(total: number): number[] {
     }
 
     .payment-section {
-      margin-top: 24px;
+      margin-top: 0;
+      padding: 12px 14px;
     }
 
     .payment-section h3 {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin: 0 0 16px 0;
-      font-size: 18px;
+      margin: 0 0 9px 0;
+      font-size: 16px;
     }
 
     .full-width {
@@ -378,62 +396,72 @@ export function calcularMontosSugeridos(total: number): number[] {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-      margin: 16px 0;
+      margin: 8px 0;
     }
 
     .quick-amounts button {
-      padding: 12px;
+      min-height: 44px;
+      padding: 6px 10px;
     }
 
-    .change-display {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 12px;
-      margin: 20px 0;
-      text-align: center;
+    .cash-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 9px;
+      border: 1px solid var(--color-borde);
+      border-radius: 10px;
+      overflow: hidden;
     }
 
-    .change-label {
-      font-size: 14px;
-      opacity: 0.9;
-      margin-bottom: 8px;
+    .cash-summary-item {
+      display: grid;
+      gap: 2px;
+      padding: 8px 12px;
     }
 
-    .change-amount {
-      font-size: 36px;
-      font-weight: 700;
+    .cash-summary-item + .cash-summary-item {
+      border-left: 1px solid var(--color-borde);
     }
 
-    .change-display.insufficient {
-      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    .cash-summary-item span {
+      font-size: 12px;
+    }
+
+    .cash-summary-item strong {
+      font-size: 17px;
+    }
+
+    .cash-change strong {
+      color: var(--color-exito);
     }
 
     .warning {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 12px;
+      padding: 8px 10px;
       background-color: #fff3e0;
       color: #e65100;
       border-radius: 8px;
-      margin-top: 16px;
+      margin-top: 8px;
     }
 
     .card-info {
-      text-align: center;
-      padding: 40px 20px;
-      background-color: #fafafa;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      padding: 8px 12px;
       border-radius: 8px;
-      margin-bottom: 24px;
+      margin-bottom: 8px;
     }
 
     .card-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      color: #666;
-      margin-bottom: 16px;
+      flex: 0 0 auto;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 0;
     }
 
     .card-info p {
@@ -442,18 +470,19 @@ export function calcularMontosSugeridos(total: number): number[] {
     }
 
     .card-steps {
-      margin: 24px 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      margin: 8px 0;
     }
 
     .card-status-panel {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      padding: 14px;
-      background: #f8fafc;
-      border: 1px solid #dbe4f0;
+      gap: 4px;
+      padding: 8px 12px;
       border-radius: 10px;
-      margin-bottom: 18px;
+      margin-bottom: 8px;
     }
 
     .status-row {
@@ -466,8 +495,9 @@ export function calcularMontosSugeridos(total: number): number[] {
     .step {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px;
+      gap: 6px;
+      padding: 6px;
+      font-size: 12px;
       opacity: 0.4;
       transition: opacity 0.3s;
     }
@@ -477,35 +507,104 @@ export function calcularMontosSugeridos(total: number): number[] {
     }
 
     .step mat-icon {
-      color: #4caf50;
+      flex: 0 0 auto;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .card-payment-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .card-payment-actions button {
+      min-height: 44px;
+    }
+
+    .card-status-message {
+      margin-top: 8px;
     }
 
     mat-card-actions {
       display: flex;
       justify-content: flex-end;
       gap: 12px;
-      padding: 16px;
+      padding: 10px 16px;
       flex-wrap: wrap;
       position: sticky;
       bottom: 0;
       background: #fff;
       border-top: 1px solid rgba(0, 0, 0, 0.08);
-      padding-bottom: calc(16px + var(--app-safe-bottom));
+      padding-bottom: calc(10px + var(--app-safe-bottom));
+      flex: 0 0 auto;
     }
 
     mat-card-actions button {
       min-width: 120px;
+      min-height: 44px;
+    }
+
+    @media (min-width: 900px) and (orientation: landscape) {
+      .checkout-content {
+        display: grid;
+        grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        align-items: start;
+        gap: 12px 14px;
+      }
+
+      .order-summary {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        align-self: stretch;
+        min-height: 0;
+        margin-bottom: 0;
+      }
+
+      .summary-items {
+        max-height: clamp(150px, 40dvh, 340px);
+      }
+
+      .payment-selector {
+        grid-column: 2;
+        grid-row: 1;
+        min-height: 48px;
+        margin-bottom: 0;
+      }
+
+      .payment-section {
+        grid-column: 2;
+        grid-row: 2;
+      }
     }
 
     @media (max-width: 768px) {
       .checkout-container {
+        height: auto;
+        min-height: calc(var(--app-viewport-height) - var(--topbar-altura));
         padding: 0 0 calc(16px + var(--app-safe-bottom));
         align-items: flex-start;
       }
 
       .checkout-card {
         max-width: 100%;
+        max-height: none;
         border-radius: 0;
+      }
+
+      .checkout-content {
+        overflow: visible;
+      }
+
+      .summary-items {
+        max-height: 180px;
+      }
+
+      .card-steps,
+      .card-payment-actions {
+        grid-template-columns: 1fr;
       }
 
       .quick-amounts {
@@ -516,6 +615,15 @@ export function calcularMontosSugeridos(total: number): number[] {
     @media (max-width: 520px) {
       .quick-amounts {
         grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cash-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .cash-summary-item + .cash-summary-item {
+        border-top: 1px solid var(--color-borde);
+        border-left: 0;
       }
 
       mat-card-title {
@@ -548,7 +656,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   };
   pendingOrderId: number | null = null;
   products: Product[] = [];
-  
+
   // Para efectivo
   amountReceived = 0;
   change = 0;
@@ -620,7 +728,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       this.snackBar.open('No hay productos en la orden', 'Cerrar', {
         duration: 3000
       });
-      
+
       // Si es orden pendiente, regresar a comandas, sino al POS
       if (this.pendingOrderId) {
         this.router.navigate(['/pending-orders']);

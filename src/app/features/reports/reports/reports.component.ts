@@ -17,7 +17,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { OrderService } from '../../../core/services/order.service';
 import { AppliedPromotionSummary, Expense, Order, Product, ProductCategory } from '../../../shared/models/domain.models';
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { endOfDay, endOfMonth, endOfWeek, format, startOfDay, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PaymentService } from '../../../core/services/payment.service';
 import { buildApiUrl } from '../../../core/config/server.config';
@@ -94,6 +94,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
 @Component({
   selector: 'app-reports',
   standalone: true,
+  styleUrl: './reports.component.scss',
   imports: [
     CommonModule,
     FormsModule,
@@ -111,12 +112,12 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
     MatSnackBarModule
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span>{{ isBaristaView ? 'Historial de ventas de hoy' : 'Reportes y Estadísticas' }}</span>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="reports-container">
       <!-- Filtros de fecha -->
@@ -269,7 +270,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                 <div class="payment-chart">
                   <div class="chart-bars">
                     <div class="bar-container">
-                      <div 
+                      <div
                         class="bar cash"
                         [style.height.%]="getPercentage(stats.cashSales)"
                       ></div>
@@ -278,7 +279,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                       <span class="bar-percent">{{getPercentage(stats.cashSales).toFixed(0)}}%</span>
                     </div>
                     <div class="bar-container">
-                      <div 
+                      <div
                         class="bar card"
                         [style.height.%]="getPercentage(stats.cardSales)"
                       ></div>
@@ -484,7 +485,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
               </mat-card-header>
               <mat-card-content>
                 <div class="sales-list">
-                  <mat-card 
+                  <mat-card
                     *ngFor="let order of recentOrders"
                     class="sale-card"
                   >
@@ -494,7 +495,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                         <span class="sale-date">{{formatDate(order.createdAt)}}</span>
                       </div>
                       <div class="sale-actions">
-                        <span 
+                        <span
                           class="payment-method"
                           [class.cash]="order.paymentMethod === 'cash'"
                           [class.card]="order.paymentMethod === 'card'"
@@ -541,7 +542,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                     </div>
 
                     <div class="sale-items">
-                      <div 
+                      <div
                         class="sale-item"
                         *ngFor="let item of order.items"
                       >
@@ -575,7 +576,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
               </mat-card-header>
               <mat-card-content>
                 <div class="inventory-grid">
-                  <mat-card 
+                  <mat-card
                     *ngFor="let product of products"
                     class="inventory-card"
                     [class.low-stock]="isLowStock(product)"
@@ -702,7 +703,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                 </div>
               </mat-card-content>
             </mat-card>
-            
+
           </div>
         </mat-tab>
       </mat-tab-group>
@@ -907,11 +908,11 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
     }
 
     .bar.cash {
-      background: linear-gradient(to top, #4caf50, #8bc34a);
+      background: var(--color-success);
     }
 
     .bar.card {
-      background: linear-gradient(to top, #2196f3, #64b5f6);
+      background: var(--color-info);
     }
 
     .bar-label {
@@ -1109,7 +1110,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
     .rank-fill {
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, #26a69a 0%, #66bb6a 100%);
+      background: var(--color-caramel);
     }
 
     .rank-stats {
@@ -1453,7 +1454,7 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
     .expense-fill {
       height: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, #ff8a65 0%, #e53935 100%);
+      background: var(--color-danger);
     }
 
     .category-grid {
@@ -1546,7 +1547,7 @@ export class ReportsComponent implements OnInit {
   selectedPeriod: ReportPeriod = 'today';
   startDate: Date = new Date();
   endDate: Date = new Date();
-  
+
 
   stats: SalesStats = {
     totalSales: 0,
@@ -1656,7 +1657,7 @@ export class ReportsComponent implements OnInit {
       void this.loadReports();
       return;
     }
-    
+
     switch (this.selectedPeriod) {
       case 'today':
         this.startDate = startOfDay(now);

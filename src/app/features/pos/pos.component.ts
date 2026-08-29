@@ -1,10 +1,9 @@
-﻿import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
+﻿import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { MatToolbarModule } from '@angular/material/toolbar';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -13,10 +12,15 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription, firstValueFrom } from 'rxjs';
-import { ProductDrinkBaseType as DrinkBaseType, Product, ProductServiceTemperature, ProductVariantPricing, OrderItem, Order } from '../../shared/models/domain.models';
+import { firstValueFrom, Subscription } from 'rxjs';
+import {
+  ProductDrinkBaseType as DrinkBaseType,
+  Order,
+  OrderItem,
+  Product,
+  ProductServiceTemperature,
+  ProductVariantPricing
+} from '../../shared/models/domain.models';
 import { OrderService } from '../../core/services/order.service';
 import { PendingOrdersService } from '../../core/services/pending-orders.service';
 import { CashRegisterService } from '../../core/services/cash-register.service';
@@ -26,6 +30,31 @@ import { PrinterService } from '../../core/services/printer.service';
 import { UiDialogService } from '../../core/services/ui-dialog.service';
 import { buildApiUrl } from '../../core/config/server.config';
 
+interface ApiCatalogRow {
+  id?: unknown;
+  name?: unknown;
+  description?: unknown;
+  price?: unknown;
+  image?: unknown;
+  categoryName?: unknown;
+  categoryId?: unknown;
+  available?: unknown;
+  stock?: unknown;
+  variantPricing?: unknown;
+  drinkBaseType?: unknown;
+  milkOptions?: unknown;
+  waterOptions?: unknown;
+  milkOptionExtras?: unknown;
+  waterOptionExtras?: unknown;
+  allowFlavorSelection?: unknown;
+  flavorOptions?: unknown;
+  flavorOptionExtras?: unknown;
+  serviceTemperature?: unknown;
+  removableIngredients?: unknown;
+  extraIngredients?: unknown;
+  extraIngredientPrices?: unknown;
+}
+
 @Component({
   selector: 'app-pos',
   standalone: true,
@@ -33,7 +62,6 @@ import { buildApiUrl } from '../../core/config/server.config';
   imports: [
     CommonModule,
     FormsModule,
-    MatToolbarModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
@@ -41,84 +69,20 @@ import { buildApiUrl } from '../../core/config/server.config';
     MatChipsModule,
     MatDividerModule,
     MatDialogModule,
-    MatSnackBarModule,
-    MatMenuModule,
-    MatTooltipModule
+    MatSnackBarModule
   ],
   template: `
       <div class="pos-container">
-        <!-- Toolbar -->
-        <mat-toolbar color="primary" class="toolbar">
-          <img class="toolbar-logo" src="assets/images/Logo-Cafeteria.png" alt="Logo Dulce Aroma Cafe" />
-          <span class="toolbar-title">Punto de venta</span>
-        <span class="toolbar-subtitle" *ngIf="addToOrderId">
-            (Agregando a Orden #{{addToOrderId}})
-        </span>
-        <span class="spacer"></span>
-
-        <button mat-stroked-button type="button" class="cancel-add-btn" *ngIf="addToOrderId" (click)="cancelAddToPendingOrder()">
-          <mat-icon>close</mat-icon>
-          Cancelar
-        </button>
-        
-        <!-- Indicador de conexión -->
-        <button mat-icon-button *ngIf="isAdmin()" [matTooltip]="isConnected ? 'Conectado al servidor' : 'Desconectado'" (click)="goToSettings()">
-          <mat-icon [class.connected]="isConnected" [class.disconnected]="!isConnected">
-            {{ isConnected ? 'wifi' : 'wifi_off' }}
-          </mat-icon>
-        </button>
-        
-        <button mat-icon-button [matMenuTriggerFor]="menu">
-          <mat-icon>more_vert</mat-icon>
-        </button>
-        <mat-menu #menu="matMenu">
-          <button mat-menu-item (click)="goToPendingOrders()">
-            <mat-icon>receipt_long</mat-icon>
-            <span>Comandas Pendientes</span>
+        <div class="add-order-context" *ngIf="addToOrderId">
+          <span>
+            <mat-icon aria-hidden="true">add_circle</mat-icon>
+            Agregando a Orden #{{ addToOrderId }}
+          </span>
+          <button mat-stroked-button type="button" class="cancel-add-btn" (click)="cancelAddToPendingOrder()">
+            <mat-icon>close</mat-icon>
+            Cancelar
           </button>
-          <button mat-menu-item (click)="goToCashRegister()" *ngIf="isAdminOrBarista()">
-            <mat-icon>point_of_sale</mat-icon>
-            <span>Caja</span>
-          </button>
-          <button mat-menu-item (click)="goToReports()" *ngIf="isAdminOrBarista()">
-            <mat-icon>assessment</mat-icon>
-            <span>Reportes</span>
-          </button>
-          <button mat-menu-item (click)="goToSuppliesAdmin()" *ngIf="isAdmin()">
-            <mat-icon>inventory_2</mat-icon>
-            <span>Administrar Insumos</span>
-          </button>
-          <button mat-menu-item (click)="goToInventoryMovements()" *ngIf="isAdminOrBarista()">
-            <mat-icon>swap_vert</mat-icon>
-            <span>Movimientos de Insumos</span>
-          </button>
-          <button mat-menu-item (click)="goToExpenses()" *ngIf="isAdminOrBarista()">
-            <mat-icon>receipt</mat-icon>
-            <span>Gastos</span>
-          </button>
-          <button mat-menu-item (click)="goToProductsAdmin()" *ngIf="isAdmin()">
-            <mat-icon>inventory</mat-icon>
-            <span>Administrar Productos</span>
-          </button>
-          <button mat-menu-item (click)="goToPromotionsAdmin()" *ngIf="isAdmin()">
-            <mat-icon>local_offer</mat-icon>
-            <span>Promociones</span>
-          </button>
-          <button mat-menu-item (click)="goToUsersAdmin()" *ngIf="isAdmin()">
-            <mat-icon>manage_accounts</mat-icon>
-            <span>Administrar Usuarios</span>
-          </button>
-          <button mat-menu-item (click)="goToPrinterSettings()" *ngIf="isAdminOrBarista()">
-            <mat-icon>print</mat-icon>
-            <span>Configurar Impresora</span>
-          </button>
-          <mat-divider></mat-divider>
-          <button mat-menu-item (click)="logout()">
-            <mat-icon>exit_to_app</mat-icon>
-            <span>Cerrar Sesión</span>
-          </button>
-        </mat-menu>
-      </mat-toolbar>
+        </div>
 
       <div class="main-content">
         <!-- Panel de productos -->
@@ -294,52 +258,15 @@ import { buildApiUrl } from '../../core/config/server.config';
       background-color: #f5f5f5;
     }
 
-    .toolbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .toolbar-logo {
-      width: 34px;
-      height: 34px;
-      object-fit: contain;
-      flex-shrink: 0;
-    }
-
-    .toolbar-title {
-      margin-left: 12px;
-      font-size: 20px;
-      font-weight: 500;
-      min-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .toolbar-subtitle {
-      margin-left: 8px;
-      font-size: 14px;
-      opacity: 0.9;
-      font-weight: 400;
-    }
-
-    .toolbar mat-icon.connected {
-      color: #4caf50;
-    }
-
-    .toolbar mat-icon.disconnected {
-      color: #f44336;
-    }
-
-    .cancel-add-btn {
-      margin-right: 8px;
-      border-color: rgba(255, 255, 255, 0.45);
-      color: white;
-    }
-
-    .spacer {
-      flex: 1;
+    .add-order-context {
+      display: flex;
+      min-height: 52px;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 18px;
+      box-sizing: border-box;
     }
 
     .main-content {
@@ -356,14 +283,17 @@ import { buildApiUrl } from '../../core/config/server.config';
       display: flex;
       flex-direction: column;
       padding: 16px;
-      overflow-y: auto;
+      overflow: hidden;
+      height: 92%;
     }
 
     .category-filters {
+      flex: 0 0 auto;
       margin-bottom: 16px;
     }
 
     .search-box {
+      flex: 0 0 auto;
       margin-bottom: 16px;
     }
 
@@ -379,15 +309,19 @@ import { buildApiUrl } from '../../core/config/server.config';
     }
 
     .search-box input:focus {
-      border-color: #3f51b5;
-      box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.12);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(18, 61, 50, 0.12);
     }
 
     .products-grid {
       display: grid;
+      min-height: 0;
+      flex: 1 1 auto;
       grid-template-columns: repeat(auto-fill, minmax(200px, 220px));
       justify-content: start;
       gap: 16px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .product-card {
@@ -466,7 +400,7 @@ import { buildApiUrl } from '../../core/config/server.config';
       flex: 1;
       min-width: 400px;
       min-height: 0;
-      height: 100%;
+      height: 90%;
       align-self: stretch;
       background-color: white;
       border-left: 1px solid #e0e0e0;
@@ -630,7 +564,7 @@ import { buildApiUrl } from '../../core/config/server.config';
       margin-right: 8px;
     }
 
-    @media (max-width: 1024px) {
+    @media (max-width: 840px) {
       .main-content {
         flex-direction: column;
       }
@@ -759,15 +693,6 @@ import { buildApiUrl } from '../../core/config/server.config';
 
       .price {
         font-size: 15px;
-      }
-
-      .toolbar-title {
-        font-size: 16px;
-        max-width: 46vw;
-      }
-
-      .toolbar-subtitle {
-        display: none;
       }
 
       .cancel-add-btn {
@@ -917,8 +842,8 @@ export class PosComponent implements OnInit, OnDestroy {
   async loadProducts() {
     try {
       const [apiProducts, apiCategories] = await Promise.all([
-        firstValueFrom(this.http.get<any[]>(buildApiUrl('products'))),
-        firstValueFrom(this.http.get<any[]>(buildApiUrl('product-categories')))
+        firstValueFrom(this.http.get<ApiCatalogRow[]>(buildApiUrl('products'))),
+        firstValueFrom(this.http.get<ApiCatalogRow[]>(buildApiUrl('product-categories')))
       ]);
 
       this.products = (apiProducts || []).map(row => this.mapApiProduct(row));
@@ -940,7 +865,7 @@ export class PosComponent implements OnInit, OnDestroy {
       const extraCategories = existingCategories.filter(c => !baseCategories.includes(c));
       this.categories = [...baseCategories, ...extraCategories];
       this.filterProducts();
-    } catch (error) {
+    } catch {
       console.error('Error cargando catálogo desde API');
       this.products = [];
       this.categories = [...this.preferredCategories];
@@ -994,7 +919,7 @@ export class PosComponent implements OnInit, OnDestroy {
     }
     return product.category || '';
   }
-  private mapApiProduct(row: any): Product {
+  private mapApiProduct(row: ApiCatalogRow): Product {
     return {
       id: Number.isFinite(Number(row?.id)) ? Number(row.id) : undefined,
       name: typeof row?.name === 'string' ? row.name : '',
@@ -1004,7 +929,7 @@ export class PosComponent implements OnInit, OnDestroy {
       category: typeof row?.categoryName === 'string' ? row.categoryName : '',
       categoryId: Number.isFinite(Number(row?.categoryId)) ? Number(row.categoryId) : undefined,
       available: row?.available !== false,
-      stock: row?.stock == null ? undefined : Number(row.stock),
+      stock: row?.stock === null || row?.stock === undefined ? undefined : Number(row.stock),
       variantPricing: this.normalizeVariantPricing(row?.variantPricing),
       drinkBaseType: this.normalizeDrinkBaseType(row?.drinkBaseType),
       milkOptions: this.normalizeOptionList(row?.milkOptions),
@@ -1060,9 +985,11 @@ export class PosComponent implements OnInit, OnDestroy {
 
     return out;
   }
-  onImageError(event: any) {
+  onImageError(event: Event) {
     // Si la imagen falla, usar un SVG placeholder
-    event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Qcm9kdWN0bzwvdGV4dD48L3N2Zz4=';
+    if (event.target instanceof HTMLImageElement) {
+      event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Qcm9kdWN0bzwvdGV4dD48L3N2Zz4=';
+    }
   }
 
   async addToOrder(product: Product) {
@@ -1153,8 +1080,9 @@ export class PosComponent implements OnInit, OnDestroy {
           this.orderService.clearOrder();
           this.router.navigate(['/pending-orders']);
         }
-      } catch (error: any) {
-        this.snackBar.open(error.message || 'Error al actualizar orden', 'Cerrar', {
+      } catch (error: unknown) {
+        const mensaje = error instanceof Error ? error.message : 'Error al actualizar orden';
+        this.snackBar.open(mensaje || 'Error al actualizar orden', 'Cerrar', {
           duration: 3000
         });
       }
@@ -1209,8 +1137,9 @@ export class PosComponent implements OnInit, OnDestroy {
         this.orderService.clearOrder();
 
 
-      } catch (error: any) {
-        this.snackBar.open(error.message || 'Error al guardar comanda', 'Cerrar', {
+      } catch (error: unknown) {
+        const mensaje = error instanceof Error ? error.message : 'Error al guardar comanda';
+        this.snackBar.open(mensaje || 'Error al guardar comanda', 'Cerrar', {
           duration: 3000
         });
       }

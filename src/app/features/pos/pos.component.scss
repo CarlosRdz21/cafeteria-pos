@@ -43,40 +43,34 @@
 :host ::ng-deep .pos-container {
   min-height: 100%;
   height: calc(100dvh - var(--topbar-altura));
-  background:
-    radial-gradient(circle at 12% 0%, rgba(196, 139, 79, 0.09), transparent 28rem),
-    var(--color-fondo);
-  color: var(--color-texto);
+  background: var(--color-fondo);
+  color: var(--color-text-on-light);
 }
 
-:host ::ng-deep .toolbar {
-  min-height: 68px;
-  height: 68px;
-  padding: 0 clamp(16px, 2.5vw, 32px);
-  color: var(--color-texto);
-  background: rgba(31, 25, 23, 0.88) !important;
+:host ::ng-deep .add-order-context {
+  display: flex;
+  min-height: 52px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 18px;
+  color: var(--color-primary);
+  background: var(--color-caramel-soft);
   border-bottom: 1px solid var(--color-borde);
-  box-shadow: none;
-  backdrop-filter: blur(14px);
 }
 
-:host ::ng-deep .toolbar-logo {
-  width: 38px;
-  height: 38px;
-  padding: 4px;
-  border-radius: 12px;
-  background: var(--color-crema);
+:host ::ng-deep .add-order-context > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
 }
 
-:host ::ng-deep .toolbar-title {
-  margin-left: 12px;
-  font-size: 1.08rem;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-}
-
-:host ::ng-deep .toolbar-subtitle {
-  color: var(--color-beige);
+:host ::ng-deep .add-order-context .cancel-add-btn {
+  min-height: 40px;
+  border-color: rgba(18, 61, 50, 0.32);
+  color: var(--color-primary);
 }
 
 :host ::ng-deep .main-content {
@@ -86,10 +80,11 @@
 
 :host ::ng-deep .products-panel {
   padding: 0;
-  scrollbar-gutter: stable;
+  overflow: hidden;
 }
 
 :host ::ng-deep .category-filters {
+  flex: 0 0 auto;
   margin: 0 0 12px;
   padding-bottom: 3px;
 }
@@ -100,63 +95,76 @@
 
 :host ::ng-deep .mat-mdc-chip-option {
   min-height: 38px;
-  color: var(--color-texto-secundario) !important;
-  background: var(--color-superficie) !important;
-  border: 1px solid var(--color-borde);
+  color: var(--color-text-secondary-on-light) !important;
+  background: var(--color-page-raised) !important;
+  border: 1px solid var(--color-page-border);
   border-radius: 999px !important;
 }
 
 :host ::ng-deep .mat-mdc-chip-option.mat-mdc-chip-selected {
-  color: #21150f !important;
-  background: linear-gradient(135deg, var(--color-caramelo), var(--color-caramelo-claro)) !important;
+  color: var(--color-text-on-dark) !important;
+  background: var(--color-accent) !important;
   border-color: transparent;
 }
 
 :host ::ng-deep .search-box {
   position: relative;
+  flex: 0 0 auto;
   margin-bottom: 18px;
 }
 
 :host ::ng-deep .search-box mat-icon {
   position: absolute;
   top: 50%;
-  left: 16px;
-  z-index: 1;
-  color: var(--color-texto-tenue);
+  left: 17px;
+  z-index: 2;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--color-text-secondary-on-light);
+  font-size: 22px;
+  line-height: 1;
+  pointer-events: none;
   transform: translateY(-50%);
 }
 
 :host ::ng-deep .search-box input {
   min-height: 50px;
-  padding: 12px 16px 12px 50px;
-  color: var(--color-texto);
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
+  padding: 12px 16px 12px 54px !important;
+  color: var(--color-text-on-light);
+  background: var(--color-page-raised) !important;
+  border: 1px solid var(--color-page-border);
   border-radius: var(--radio-md);
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
 :host ::ng-deep .search-box input::placeholder {
-  color: var(--color-texto-tenue);
+  color: var(--color-text-secondary-on-light);
 }
 
 :host ::ng-deep .search-box input:focus {
-  background: var(--color-superficie-elevada);
-  border-color: var(--color-caramelo);
-  box-shadow: 0 0 0 3px rgba(196, 139, 79, 0.16);
+  background: var(--color-page-raised);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(18, 61, 50, 0.14);
 }
 
 :host ::ng-deep .products-grid {
+  min-height: 0;
+  flex: 1 1 auto;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 14px;
   padding-bottom: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 :host ::ng-deep .product-card {
   max-width: none;
-  color: var(--color-texto);
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
+  color: var(--color-text-on-light);
+  background: var(--color-page-raised) !important;
+  border: 1px solid var(--color-page-border);
   border-radius: var(--radio-lg);
   box-shadow: var(--sombra-sm);
   transition: transform 170ms ease, border-color 170ms ease, box-shadow 170ms ease;
@@ -164,12 +172,12 @@
 
 :host ::ng-deep .product-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(196, 139, 79, 0.55);
+  border-color: var(--color-caramel);
   box-shadow: var(--sombra-md);
 }
 
 :host ::ng-deep .product-card:focus-within {
-  outline: 2px solid var(--color-caramelo);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -197,14 +205,14 @@
 }
 
 :host ::ng-deep .product-card h3 {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-weight: 720;
   line-height: 1.25;
 }
 
 :host ::ng-deep .product-description {
   min-height: 30px;
-  color: var(--color-texto-secundario);
+  color: var(--color-text-secondary-on-light);
   line-height: 1.35;
 }
 
@@ -222,28 +230,33 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: var(--color-texto-secundario);
+  color: var(--color-text-secondary-on-light);
   text-align: center;
-  border: 1px dashed var(--color-borde-fuerte);
+  border: 1px dashed var(--color-page-border);
   border-radius: var(--radio-lg);
 }
 
 :host ::ng-deep .empty-products mat-icon {
   width: 44px;
   height: 44px;
-  color: var(--color-caramelo);
+  color: var(--color-primary);
   font-size: 44px;
 }
 
 :host ::ng-deep .empty-products strong {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-size: 1rem;
 }
 
 :host ::ng-deep .order-panel {
+  display: flex;
   min-width: 390px;
+  min-height: 0;
   max-width: 460px;
+  max-height: 100%;
+  flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
   background: var(--color-superficie);
   border: 1px solid var(--color-borde);
   border-radius: var(--radio-xl);
@@ -251,15 +264,16 @@
 }
 
 :host ::ng-deep .order-header {
+  flex: 0 0 auto;
   padding: 18px 20px;
-  background: linear-gradient(145deg, rgba(196, 139, 79, 0.11), transparent 70%);
+  background: var(--color-superficie-elevada);
   border-bottom-color: var(--color-borde);
 }
 
 :host ::ng-deep .order-eyebrow {
   display: block;
   margin-bottom: 3px;
-  color: var(--color-caramelo-claro);
+  color: var(--color-accent);
   font-size: 0.69rem;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -267,7 +281,7 @@
 }
 
 :host ::ng-deep .order-header h2 {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-size: 1.25rem;
 }
 
@@ -277,18 +291,53 @@
 }
 
 :host ::ng-deep .order-items {
-  padding: 14px;
+  min-height: 0;
+  flex: 1 1 0;
+  padding: 10px 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(18, 61, 50, 0.34) transparent;
+  scrollbar-width: thin;
+}
+
+:host ::ng-deep .order-items::-webkit-scrollbar {
+  width: 7px;
+}
+
+:host ::ng-deep .order-items::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:host ::ng-deep .order-items::-webkit-scrollbar-thumb {
+  background: rgba(18, 61, 50, 0.28);
+  border-radius: 999px;
 }
 
 :host ::ng-deep .order-item {
-  padding: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 9px 10px;
   background: var(--color-superficie-suave);
   border-color: var(--color-borde);
   border-radius: var(--radio-md);
 }
 
+:host ::ng-deep .order-item:last-child {
+  margin-bottom: 0;
+}
+
+:host ::ng-deep .item-info {
+  min-width: 0;
+}
+
 :host ::ng-deep .item-info h4 {
-  color: var(--color-texto);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host ::ng-deep .item-info h4 {
+  color: var(--color-primary);
   font-weight: 700;
 }
 
@@ -305,18 +354,31 @@
 }
 
 :host ::ng-deep .empty-order {
+  min-height: 0;
+  flex: 1 1 0;
   color: var(--color-texto-tenue);
 }
 
 :host ::ng-deep .empty-order mat-icon {
-  color: var(--color-caramelo);
+  color: var(--color-primary);
   opacity: 0.66;
 }
 
 :host ::ng-deep .order-totals {
-  padding: 16px 20px 20px;
+  min-height: max-content;
+  flex: 0 0 auto;
+  padding: 12px 18px 16px;
   background: var(--color-superficie-elevada);
   border-top-color: var(--color-borde);
+}
+
+:host ::ng-deep .action-buttons {
+  gap: 9px;
+  margin-top: 10px;
+}
+
+:host ::ng-deep .payment-buttons {
+  gap: 9px;
 }
 
 :host ::ng-deep .total-row {
@@ -334,7 +396,7 @@
 }
 
 :host ::ng-deep .pending-btn {
-  color: #21150f !important;
+  color: var(--color-primary) !important;
   background: var(--color-beige) !important;
 }
 
@@ -345,12 +407,44 @@
 }
 
 @media (max-width: 1180px) {
+  :host ::ng-deep .main-content {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  :host ::ng-deep .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 12px;
+  }
+
+  :host ::ng-deep .product-image {
+    height: 130px;
+  }
+
   :host ::ng-deep .order-panel {
     min-width: 350px;
   }
+
+  :host ::ng-deep .order-header {
+    padding: 14px 16px;
+  }
+
+  :host ::ng-deep .order-items {
+    padding: 8px 9px;
+  }
+
+  :host ::ng-deep .order-item {
+    gap: 6px;
+    margin-bottom: 6px;
+    padding: 8px;
+  }
+
+  :host ::ng-deep .order-totals {
+    padding: 10px 14px 12px;
+  }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 840px) {
   :host ::ng-deep .pos-container {
     height: auto;
   }
@@ -373,17 +467,6 @@
 
   :host ::ng-deep .products-panel {
     padding: 0 0 calc(104px + var(--app-safe-bottom));
-  }
-
-  :host ::ng-deep .toolbar {
-    min-height: 58px;
-    height: 58px;
-    padding-inline: 12px;
-  }
-
-  :host ::ng-deep .toolbar-logo {
-    width: 34px;
-    height: 34px;
   }
 
   :host ::ng-deep .products-grid {

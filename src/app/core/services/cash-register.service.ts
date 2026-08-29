@@ -10,17 +10,14 @@ import { buildApiUrl } from '../config/server.config';
 export class CashRegisterService {
   private currentRegisterSubject = new BehaviorSubject<CashRegister | null>(null);
   public currentRegister$ = this.currentRegisterSubject.asObservable();
-  private readonly initPromise: Promise<void>;
+  private inicializada = false;
+  private promesaInicializacion?: Promise<void>;
 
   private get API() {
     return buildApiUrl('cash-registers');
   }
 
-  constructor(private http: HttpClient) {
-    // La consulta se difiere hasta que AuthService termine de construirse. Ejecutarla
-    // sincrónicamente activa el interceptor mientras AuthService sigue inicializándose.
-    this.initPromise = Promise.resolve().then(() => this.loadCurrentRegister());
-  }
+  constructor(private http: HttpClient) {}
 
   private async loadCurrentRegister() {
     try {
@@ -80,6 +77,7 @@ export class CashRegisterService {
 
   clearCurrentRegister(): void {
     this.currentRegisterSubject.next(null);
+    this.inicializada = false;
   }
 
   isRegisterOpen(): boolean {
@@ -97,11 +95,21 @@ export class CashRegisterService {
   }
 
   async ensureInitialized(): Promise<void> {
-    await this.initPromise;
+    if (this.inicializada) return;
+
+    if (!this.promesaInicializacion) {
+      this.promesaInicializacion = this.loadCurrentRegister().finally(() => {
+        this.inicializada = true;
+        this.promesaInicializacion = undefined;
+      });
+    }
+
+    await this.promesaInicializacion;
   }
 
   async refreshCurrentRegister(): Promise<void> {
     await this.loadCurrentRegister();
+    this.inicializada = true;
   }
 
   private mapRegister(row: any): CashRegister | null {

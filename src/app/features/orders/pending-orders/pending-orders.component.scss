@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100%;
-  color: var(--color-texto);
+  color: var(--color-text-on-light);
   background: var(--color-fondo);
 }
 
@@ -24,9 +24,7 @@
 :host ::ng-deep .pending-orders-container {
   min-height: calc(100dvh - var(--topbar-altura) - 68px);
   padding: clamp(16px, 2.5vw, 30px);
-  background:
-    radial-gradient(circle at 95% 0%, rgba(196, 139, 79, 0.08), transparent 26rem),
-    var(--color-fondo);
+  background: var(--color-fondo);
 }
 
 :host ::ng-deep .orders-grid {
@@ -46,7 +44,7 @@
 
 :host ::ng-deep .order-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(196, 139, 79, 0.5);
+  border-color: var(--color-caramel);
   box-shadow: var(--sombra-md);
 }
 
@@ -56,19 +54,19 @@
 
 :host ::ng-deep .order-title {
   align-items: center;
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-size: 1.02rem;
   font-weight: 760;
 }
 
 :host ::ng-deep .order-title mat-icon {
-  color: var(--color-caramelo-claro);
+  color: var(--color-accent);
 }
 
 :host ::ng-deep .table-chip {
-  color: var(--color-crema) !important;
-  background: rgba(196, 139, 79, 0.16) !important;
-  border: 1px solid rgba(196, 139, 79, 0.32);
+  color: var(--color-primary) !important;
+  background: var(--color-primary-soft) !important;
+  border: 1px solid rgba(18, 61, 50, 0.18);
 }
 
 :host ::ng-deep .order-card mat-card-content {
@@ -92,7 +90,7 @@
 }
 
 :host ::ng-deep .hint-line {
-  color: var(--color-caramelo-claro);
+  color: var(--color-accent);
 }
 
 :host ::ng-deep .items-summary {
@@ -112,8 +110,8 @@
 
 :host ::ng-deep .order-total {
   padding: 14px 16px;
-  color: #20140f;
-  background: linear-gradient(135deg, var(--color-caramelo), var(--color-caramelo-claro));
+  color: var(--color-text-on-dark);
+  background: var(--color-primary);
   border-radius: var(--radio-sm);
 }
 
@@ -141,13 +139,13 @@
 :host ::ng-deep .empty-state mat-icon {
   width: 68px;
   height: 68px;
-  color: var(--color-caramelo);
+  color: var(--color-primary);
   font-size: 68px;
   opacity: 0.8;
 }
 
 :host ::ng-deep .empty-state h2 {
-  color: var(--color-texto);
+  color: var(--color-primary);
 }
 
 @media (max-width: 600px) {
