@@ -42,7 +42,7 @@ type UserForm = Omit<User, 'id' | 'createdAt'> & {
     MatSnackBarModule
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
@@ -51,9 +51,31 @@ type UserForm = Omit<User, 'id' | 'createdAt'> & {
       <button mat-icon-button (click)="addNewUser()">
         <mat-icon>person_add</mat-icon>
       </button>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="admin-container">
+      <div class="user-create-toolbar">
+        <mat-form-field appearance="outline" class="user-search-field">
+          <mat-label>Buscar usuario</mat-label>
+          <input
+            matInput
+            [(ngModel)]="terminoBusqueda"
+            placeholder="Nombre, usuario, rol o estado"
+          >
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          type="button"
+          class="add-user-button"
+          (click)="addNewUser()"
+        >
+          <mat-icon>person_add</mat-icon>
+          <span>Nuevo usuario</span>
+        </button>
+      </div>
+
       <mat-card class="form-card" *ngIf="editingUser">
         <mat-card-header>
           <mat-card-title>
@@ -109,7 +131,7 @@ type UserForm = Omit<User, 'id' | 'createdAt'> & {
       </mat-card>
 
       <div class="users-list">
-        <mat-card class="user-item" *ngFor="let user of users">
+        <mat-card class="user-item" *ngFor="let user of usuariosFiltrados">
           <div class="user-content">
             <div class="user-info">
               <h3>{{ user.name }}</h3>
@@ -140,7 +162,37 @@ type UserForm = Omit<User, 'id' | 'createdAt'> & {
   `,
   styles: [`
     .spacer { flex: 1; }
-    .admin-container { padding: 20px; max-width: 1100px; margin: 0 auto; }
+    .admin-container { padding: 20px; max-width: 1100px; margin: 0 auto; background: #f5f5f5; }
+    .user-create-toolbar {
+      position: sticky;
+      top: calc(var(--app-safe-top) + var(--topbar-height) + 12px);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      width: 100%;
+      margin: 0 0 24px;
+      padding: 14px 16px;
+      box-sizing: border-box;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: var(--radio-lg);
+      box-shadow: var(--sombra-sm);
+    }
+    .user-search-field {
+      flex: 1 1 360px;
+      max-width: 520px;
+      margin-right: auto;
+    }
+    .add-user-button {
+      flex: 0 0 auto;
+      min-height: 44px;
+      background: var(--color-accent) !important;
+      color: #fff !important;
+      box-shadow: 0 8px 18px rgba(194, 72, 28, 0.2);
+    }
+    .add-user-button:hover { background: var(--color-accent-hover) !important; }
     .form-card { margin-bottom: 24px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
     .toggle-field { display: flex; align-items: center; }
@@ -160,6 +212,9 @@ type UserForm = Omit<User, 'id' | 'createdAt'> & {
     .user-actions { display: flex; flex-direction: column; gap: 8px; }
     @media (max-width: 768px) {
       .admin-container { padding: 12px; }
+      .user-create-toolbar { align-items: stretch; padding: 12px; flex-direction: column; }
+      .user-search-field { width: 100%; max-width: none; }
+      .add-user-button { align-self: flex-end; }
       .user-content { grid-template-columns: 1fr; }
       .user-actions { flex-direction: row; justify-content: flex-end; }
       .form-grid { grid-template-columns: 1fr; }
@@ -168,6 +223,7 @@ type UserForm = Omit<User, 'id' | 'createdAt'> & {
 })
 export class UsersAdminComponent implements OnInit {
   users: User[] = [];
+  terminoBusqueda = '';
   editingUser: UserForm | null = null;
 
   constructor(
@@ -180,6 +236,26 @@ export class UsersAdminComponent implements OnInit {
 
   async ngOnInit() {
     await this.loadUsers();
+  }
+
+  get usuariosFiltrados(): User[] {
+    const terminoNormalizado = this.terminoBusqueda.trim().toLocaleLowerCase('es-MX');
+    if (!terminoNormalizado) {
+      return this.users;
+    }
+
+    return this.users.filter(user => {
+      const contenidoBuscable = [
+        user.name,
+        user.username,
+        this.roleLabel(user.role),
+        user.active ? 'Activo' : 'Inactivo'
+      ]
+        .join(' ')
+        .toLocaleLowerCase('es-MX');
+
+      return contenidoBuscable.includes(terminoNormalizado);
+    });
   }
 
   async loadUsers() {
@@ -302,7 +378,7 @@ export class UsersAdminComponent implements OnInit {
 
     const confirmed = await this.uiDialog.confirm({
       title: 'Eliminar usuario',
-      message: `¿Eliminar usuario ${user.username}?`,
+      message: `ï¿½Eliminar usuario ${user.username}?`,
       confirmText: 'Eliminar'
     });
     if (!confirmed) return;
@@ -358,7 +434,6 @@ export class UsersAdminComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 }
-
 
 
 

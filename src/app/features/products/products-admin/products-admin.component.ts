@@ -44,7 +44,7 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
     BlankZeroNumberDirective
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
@@ -53,7 +53,7 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
       <button mat-icon-button (click)="addNewProduct()">
         <mat-icon>add</mat-icon>
       </button>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="admin-container">
       <div class="search-row">
@@ -71,6 +71,16 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
             </mat-option>
           </mat-select>
         </mat-form-field>
+
+        <button
+          mat-flat-button
+          type="button"
+          class="add-product-button"
+          (click)="addNewProduct()"
+        >
+          <mat-icon>add</mat-icon>
+          <span>Nuevo producto</span>
+        </button>
       </div>
 
       <ng-template #productEditorDialog>
@@ -543,9 +553,10 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
     }
 
     .admin-container {
-      padding: 160px 20px 20px;
+      padding: 20px;
       max-width: 1400px;
       margin: 0 auto;
+      background: #f5f5f5;
     }
 
     .form-card {
@@ -553,30 +564,44 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
     }
 
     .search-row {
-      position: fixed;
-      top: 64px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(calc(100vw - 40px), 1400px);
-      z-index: 90;
-      margin: 0;
+      position: sticky;
+      top: calc(var(--app-safe-top) + var(--topbar-height) + 12px);
+      z-index: 20;
+      width: 100%;
+      margin: 0 0 24px;
       padding: 16px 20px 12px;
       background: #fafafa;
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
+      display: grid;
+      grid-template-columns: minmax(260px, 440px) minmax(220px, 350px) auto;
+      gap: 12px 16px;
+      align-items: center;
+      box-sizing: border-box;
     }
 
     .search-field {
       width: 100%;
-      max-width: 440px;
-      padding-top: 10px;
     }
 
     .category-filter {
-      width: min(280px, 100%);
-      padding-top: 10px;
+      width: 100%;
+    }
+
+    .search-row mat-form-field {
+      margin: 0;
+    }
+
+    .add-product-button {
+      grid-column: auto;
+      justify-self: end;
+      min-height: 44px;
+      background: var(--color-accent) !important;
+      color: #fff !important;
+      box-shadow: 0 8px 18px rgba(194, 72, 28, 0.2);
+    }
+
+    .add-product-button:hover {
+      background: var(--color-accent-hover) !important;
     }
 
     .form-grid {
@@ -886,21 +911,23 @@ type DrinkBaseSelection = 'none' | 'milk' | 'water' | 'both';
     }
     @media (max-width: 768px) {
       .admin-container {
-        padding: 220px 12px 12px;
+        padding: 12px;
       }
 
       .search-row {
-        top: 56px;
-        width: calc(100vw - 24px);
+        width: 100%;
         padding: 12px 12px 10px;
-        flex-direction: column;
+        grid-template-columns: 1fr;
       }
 
       .search-field,
       .category-filter {
-        max-width: none;
         width: 100%;
-        padding-top: 10px;
+      }
+
+      .add-product-button {
+        grid-column: 1;
+        justify-self: end;
       }
 
       .product-content {
@@ -2012,8 +2039,5 @@ try {
     };
   }
 }
-
-
-
 
 

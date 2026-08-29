@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100%;
-  color: var(--color-texto);
+  color: var(--color-text-on-light);
   background: var(--color-fondo);
 }
 
@@ -23,9 +23,7 @@
 :host ::ng-deep .movements-container {
   min-height: calc(100dvh - var(--topbar-altura) - 68px);
   padding: clamp(16px, 2.5vw, 30px);
-  background:
-    radial-gradient(circle at 88% 0%, rgba(196, 139, 79, 0.08), transparent 28rem),
-    var(--color-fondo);
+  background: var(--color-fondo);
 }
 
 :host ::ng-deep .form-card,
@@ -44,7 +42,7 @@
 }
 
 :host ::ng-deep mat-card-title {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-weight: 760;
 }
 
@@ -80,7 +78,7 @@
 }
 
 :host ::ng-deep .summary-item .value {
-  color: var(--color-caramelo-claro);
+  color: var(--color-primary);
 }
 
 :host ::ng-deep .table-scroll {
@@ -94,11 +92,11 @@
 }
 
 :host ::ng-deep .mat-mdc-header-row {
-  background: rgba(196, 139, 79, 0.1);
+  background: var(--color-primary-soft);
 }
 
 :host ::ng-deep .mat-mdc-header-cell {
-  color: var(--color-beige);
+  color: var(--color-primary);
   border-bottom-color: var(--color-borde-fuerte);
   font-weight: 750;
 }
@@ -113,12 +111,12 @@
 }
 
 :host ::ng-deep .type-badge.in {
-  color: #bce8ce;
+  color: var(--color-exito);
   background: rgba(58, 148, 101, 0.16);
 }
 
 :host ::ng-deep .type-badge.out {
-  color: #ffc0c0;
+  color: var(--color-error);
   background: rgba(196, 73, 73, 0.16);
 }
 
@@ -131,7 +129,7 @@
 }
 
 :host ::ng-deep .empty-state mat-icon {
-  color: var(--color-caramelo);
+  color: var(--color-primary);
 }
 
 @media (max-width: 768px) {

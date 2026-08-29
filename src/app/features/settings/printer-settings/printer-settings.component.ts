@@ -30,12 +30,12 @@ import { KnownPrinter, PrinterConfig, PrinterService } from '../../../core/servi
     MatSnackBarModule
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span>Configuracion de Impresora</span>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="container">
       <mat-card>
@@ -65,8 +65,8 @@ import { KnownPrinter, PrinterConfig, PrinterService } from '../../../core/servi
           </mat-form-field>
 
           <div class="actions">
-            <button mat-raised-button color="accent" (click)="pairPrinter()">Buscar / agregar impresora</button>
-            <button mat-raised-button color="primary" (click)="connect()">Conectar</button>
+            <button mat-raised-button color="primary" (click)="pairPrinter()">Buscar / agregar impresora</button>
+            <button mat-raised-button color="accent" (click)="connect()">Conectar</button>
             <button mat-raised-button color="warn" (click)="disconnect()">Desconectar</button>
             <button mat-raised-button (click)="printTest()">Imprimir prueba</button>
           </div>

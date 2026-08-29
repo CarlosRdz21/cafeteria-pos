@@ -1,18 +1,18 @@
-:host { display: block; min-height: 100%; color: var(--color-texto); background: var(--color-fondo); }
+:host { display: block; min-height: 100%; color: var(--color-text-on-light); background: var(--color-fondo); }
 :host ::ng-deep mat-toolbar { min-height: 68px; height: 68px; padding-inline: clamp(12px, 2.5vw, 28px); color: var(--color-texto); background: var(--color-superficie) !important; border-bottom: 1px solid var(--color-borde); box-shadow: none; }
 :host ::ng-deep mat-toolbar > span:not(.spacer) { font-size: 1.1rem; font-weight: 760; }
-:host ::ng-deep .admin-container { max-width: 1400px; min-height: calc(100dvh - var(--topbar-altura) - 68px); padding: clamp(16px, 2.5vw, 30px); background: radial-gradient(circle at 90% 0%, rgba(196,139,79,.08), transparent 28rem), var(--color-fondo); }
+:host ::ng-deep .admin-container { max-width: 1400px; min-height: calc(100dvh - var(--topbar-altura) - 68px); padding: clamp(16px, 2.5vw, 30px); background: var(--color-fondo); }
 :host ::ng-deep .form-card, :host ::ng-deep .promotion-item { color: var(--color-texto); background: var(--color-superficie); border: 1px solid var(--color-borde); border-radius: var(--radio-lg); box-shadow: var(--sombra-sm); }
 :host ::ng-deep .form-card { overflow: hidden; }
-:host ::ng-deep mat-card-title { color: var(--color-texto); font-weight: 760; }
+:host ::ng-deep mat-card-title { color: var(--color-primary); font-weight: 760; }
 :host ::ng-deep .toggle-field { min-height: 48px; padding: 12px 14px; background: var(--color-superficie-elevada); border: 1px solid var(--color-borde); border-radius: var(--radio-sm); }
 :host ::ng-deep mat-card-actions { background: var(--color-superficie-elevada); border-top: 1px solid var(--color-borde); }
 :host ::ng-deep mat-card-actions button { min-height: 44px; border-radius: var(--radio-sm) !important; }
 :host ::ng-deep .promotion-list { gap: 12px; }
 :host ::ng-deep .promotion-item { transition: transform 160ms ease, border-color 160ms ease; }
-:host ::ng-deep .promotion-item:hover { transform: translateY(-1px); border-color: rgba(196,139,79,.48); }
-:host ::ng-deep .promotion-info h3 { color: var(--color-texto); font-weight: 740; }
+:host ::ng-deep .promotion-item:hover { transform: translateY(-1px); border-color: var(--color-caramel); }
+:host ::ng-deep .promotion-info h3 { color: var(--color-primary); font-weight: 740; }
 :host ::ng-deep .tag { color: var(--color-texto-secundario) !important; background: var(--color-superficie-elevada) !important; border: 1px solid var(--color-borde); border-radius: 999px !important; }
-:host ::ng-deep .status.active { color: #bce8ce !important; background: rgba(58,148,101,.15) !important; }
-:host ::ng-deep .status.inactive { color: #ffc0c0 !important; background: rgba(196,73,73,.15) !important; }
+:host ::ng-deep .status.active { color: var(--color-exito) !important; background: rgba(62,122,87,.12) !important; }
+:host ::ng-deep .status.inactive { color: var(--color-texto-secundario) !important; background: var(--color-superficie-elevada) !important; }
 @media (max-width: 768px) { :host ::ng-deep mat-toolbar { min-height: 58px; height: 58px; } :host ::ng-deep .admin-container { padding: 12px; } }

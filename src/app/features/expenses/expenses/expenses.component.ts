@@ -53,7 +53,7 @@ import {
     BlankZeroNumberDirective
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
@@ -63,7 +63,7 @@ import {
         <mat-icon>today</mat-icon>
         Hoy
       </button>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="expenses-container">
       <!-- Formulario de gasto -->
@@ -290,6 +290,7 @@ import {
       flex-direction: column;
       gap: 6px;
       padding-top: 4px;
+      margin-block: 10px;
     }
 
     .cash-toggle-hint {
@@ -321,7 +322,7 @@ import {
     }
 
     .summary-item.total {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--color-accent-soft);
       color: white;
     }
 

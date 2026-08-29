@@ -30,12 +30,12 @@ import { getServerUrl, validarUrlServidorLocal } from '../../../core/config/serv
     MatSnackBarModule
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span>Configuracion</span>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="settings-container">
       <mat-card>
@@ -69,7 +69,7 @@ import { getServerUrl, validarUrlServidorLocal } from '../../../core/config/serv
           </div>
 
           <div class="actions">
-            <button mat-raised-button color="primary" (click)="connect()" [disabled]="isConnected">
+            <button mat-raised-button color="accent" (click)="connect()" [disabled]="isConnected">
               <mat-icon>link</mat-icon>
               Conectar
             </button>
@@ -85,7 +85,7 @@ import { getServerUrl, validarUrlServidorLocal } from '../../../core/config/serv
         </mat-card-content>
       </mat-card>
 
-      <mat-card>
+      <!--<mat-card>
         <mat-card-header>
           <mat-card-title>Instrucciones</mat-card-title>
         </mat-card-header>
@@ -125,7 +125,7 @@ import { getServerUrl, validarUrlServidorLocal } from '../../../core/config/serv
             </div>
           </div>
         </mat-card-content>
-      </mat-card>
+      </mat-card>-->
     </div>
   `,
   styles: [`
@@ -202,7 +202,7 @@ import { getServerUrl, validarUrlServidorLocal } from '../../../core/config/serv
 
     .instructions h3 {
       margin: 0 0 16px 0;
-      color: #667eea;
+      color: var(--color-primary);
     }
 
     .instructions ol {
@@ -222,7 +222,7 @@ import { getServerUrl, validarUrlServidorLocal } from '../../../core/config/serv
       padding: 2px 8px;
       border-radius: 4px;
       font-family: 'Courier New', monospace;
-      color: #667eea;
+      color: var(--color-primary);
     }
 
     .note {

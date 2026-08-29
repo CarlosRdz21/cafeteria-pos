@@ -27,12 +27,12 @@ import { AuthService } from '../../../core/auth/auth.service';
     MatToolbarModule
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span>Diagnostico de Red</span>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="test-container">
       <mat-card>
@@ -75,7 +75,7 @@ import { AuthService } from '../../../core/auth/auth.service';
         </mat-card-content>
       </mat-card>
 
-      <mat-card>
+      <!--<mat-card>
         <mat-card-header>
           <mat-card-title>Instrucciones de Solucion</mat-card-title>
         </mat-card-header>
@@ -114,7 +114,7 @@ import { AuthService } from '../../../core/auth/auth.service';
             </div>
           </div>
         </mat-card-content>
-      </mat-card>
+      </mat-card>-->
     </div>
   `,
   styles: [`
@@ -174,7 +174,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     }
 
     .instructions h3 {
-      color: #667eea;
+      color: var(--color-primary);
       margin-bottom: 16px;
     }
 
@@ -188,7 +188,7 @@ import { AuthService } from '../../../core/auth/auth.service';
     .step strong {
       display: block;
       margin-bottom: 8px;
-      color: #667eea;
+      color: var(--color-primary);
     }
 
     .step p {

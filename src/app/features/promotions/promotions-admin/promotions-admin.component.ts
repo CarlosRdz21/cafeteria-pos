@@ -37,7 +37,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
     BlankZeroNumberDirective
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
@@ -46,9 +46,31 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
       <button mat-icon-button (click)="startCreate()">
         <mat-icon>add</mat-icon>
       </button>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="admin-container">
+      <div class="promotion-create-toolbar">
+        <mat-form-field appearance="outline" class="promotion-search-field">
+          <mat-label>Buscar promoción</mat-label>
+          <input
+            matInput
+            [(ngModel)]="terminoBusqueda"
+            placeholder="Nombre o tipo de promoción"
+          >
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          type="button"
+          class="add-promotion-button"
+          (click)="startCreate()"
+        >
+          <mat-icon>add</mat-icon>
+          <span>Nueva promoción</span>
+        </button>
+      </div>
+
       <mat-card class="form-card" *ngIf="editingPromotion">
         <mat-card-header>
           <mat-card-title>{{ isEditingExisting() ? 'Editar promoción' : 'Nueva promoción' }}</mat-card-title>
@@ -149,7 +171,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
       </mat-card>
 
       <div class="promotion-list">
-        <mat-card class="promotion-item" *ngFor="let promotion of promotions">
+        <mat-card class="promotion-item" *ngFor="let promotion of promocionesFiltradas">
           <div class="promotion-content">
             <div class="promotion-info">
               <div class="promotion-header">
@@ -186,6 +208,39 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
       padding: 20px;
       max-width: 1200px;
       margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .promotion-create-toolbar {
+      position: sticky;
+      top: calc(var(--app-safe-top) + var(--topbar-height) + 12px);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      width: 100%;
+      margin: 0 0 24px;
+      padding: 14px 16px;
+      box-sizing: border-box;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: var(--radio-lg);
+      box-shadow: var(--sombra-sm);
+    }
+    .promotion-search-field {
+      flex: 1 1 360px;
+      max-width: 520px;
+      margin-right: auto;
+    }
+    .add-promotion-button {
+      flex: 0 0 auto;
+      min-height: 44px;
+      background: var(--color-accent) !important;
+      color: #fff !important;
+      box-shadow: 0 8px 18px rgba(194, 72, 28, 0.2);
+    }
+    .add-promotion-button:hover {
+      background: var(--color-accent-hover) !important;
     }
     .form-card {
       margin-bottom: 24px;
@@ -268,6 +323,18 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
       .admin-container {
         padding: 12px;
       }
+      .promotion-create-toolbar {
+        align-items: stretch;
+        padding: 12px;
+        flex-direction: column;
+      }
+      .promotion-search-field {
+        width: 100%;
+        max-width: none;
+      }
+      .add-promotion-button {
+        align-self: flex-end;
+      }
       .form-grid {
         grid-template-columns: 1fr;
       }
@@ -283,6 +350,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 })
 export class PromotionsAdminComponent implements OnInit {
   promotions: Promotion[] = [];
+  terminoBusqueda = '';
   editingPromotion: Promotion | null = null;
   originalPromotionId: string | null = null;
   guardandoPromocion = false;
@@ -309,6 +377,26 @@ export class PromotionsAdminComponent implements OnInit {
     await this.promotionService.ensureLoaded();
     this.promotions = this.promotionService.getPromotions();
     await this.loadCatalog();
+  }
+
+  get promocionesFiltradas(): Promotion[] {
+    const terminoNormalizado = this.terminoBusqueda.trim().toLocaleLowerCase('es-MX');
+    if (!terminoNormalizado) {
+      return this.promotions;
+    }
+
+    return this.promotions.filter(promotion => {
+      const contenidoBuscable = [
+        promotion.name,
+        this.describePromotion(promotion),
+        this.describeScope(promotion),
+        this.describeWeekdays(promotion.dayOfWeek)
+      ]
+        .join(' ')
+        .toLocaleLowerCase('es-MX');
+
+      return contenidoBuscable.includes(terminoNormalizado);
+    });
   }
 
   startCreate() {

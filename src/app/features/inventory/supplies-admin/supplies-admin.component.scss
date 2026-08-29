@@ -1,7 +1,7 @@
 :host {
   display: block;
   min-height: 100%;
-  color: var(--color-texto);
+  color: var(--color-text-on-light);
   background: var(--color-fondo);
 }
 
@@ -24,9 +24,7 @@
   max-width: 1500px;
   min-height: calc(100dvh - var(--topbar-altura) - 68px);
   padding: clamp(16px, 2.5vw, 30px);
-  background:
-    radial-gradient(circle at 90% 0%, rgba(196, 139, 79, 0.08), transparent 28rem),
-    var(--color-fondo);
+  background: var(--color-fondo);
 }
 
 :host ::ng-deep .form-card,
@@ -47,7 +45,7 @@
 }
 
 :host ::ng-deep mat-card-title {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-weight: 760;
 }
 
@@ -89,11 +87,11 @@
 
 :host ::ng-deep .supply-item:hover {
   transform: translateY(-1px);
-  border-color: rgba(196, 139, 79, 0.48);
+  border-color: var(--color-caramel);
 }
 
 :host ::ng-deep .supply-info h3 {
-  color: var(--color-texto);
+  color: var(--color-primary);
   font-weight: 740;
 }
 
@@ -122,13 +120,13 @@
   display: inline-flex;
   margin-top: 10px;
   padding: 4px 9px;
-  color: #bce8ce;
+  color: var(--color-exito);
   background: rgba(58, 148, 101, 0.15);
   border-radius: 999px;
 }
 
 :host ::ng-deep .status.inactive {
-  color: #ffc0c0;
+  color: var(--color-error);
   background: rgba(196, 73, 73, 0.15);
 }
 

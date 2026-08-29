@@ -41,12 +41,12 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
     BlankZeroNumberDirective
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span>Movimientos de Insumos</span>
-    </mat-toolbar>
+    </mat-toolbar> -->
 
     <div class="movements-container">
       <!-- Formulario -->
@@ -233,6 +233,10 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
     </div>
   `,
   styles: [`
+    mat-card-title {
+      margin-bottom: 15px;
+    }
+
     .movements-container {
       min-height: calc(100vh - 64px);
       background-color: #f5f5f5;

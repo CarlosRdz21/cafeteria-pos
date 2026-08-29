@@ -35,7 +35,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
     BlankZeroNumberDirective
   ],
   template: `
-    <mat-toolbar color="primary">
+    <!--<mat-toolbar color="primary">
       <button mat-icon-button (click)="goBack()">
         <mat-icon>arrow_back</mat-icon>
       </button>
@@ -44,9 +44,31 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
       <button mat-icon-button (click)="addNewSupply()">
         <mat-icon>add</mat-icon>
       </button>
-    </mat-toolbar>
+    </mat-toolbar>-->
 
     <div class="admin-container">
+      <div class="supply-create-toolbar">
+        <mat-form-field appearance="outline" class="supply-search-field">
+          <mat-label>Buscar insumo</mat-label>
+          <input
+            matInput
+            [(ngModel)]="terminoBusqueda"
+            placeholder="Nombre, categoría, unidad o estado"
+          >
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          type="button"
+          class="add-supply-button"
+          (click)="addNewSupply()"
+        >
+          <mat-icon>add</mat-icon>
+          <span>Nuevo insumo</span>
+        </button>
+      </div>
+
       <!-- Formulario -->
       <mat-card class="form-card" *ngIf="editingSupply">
         <mat-card-header>
@@ -122,7 +144,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 
       <!-- Lista -->
       <div class="supplies-list">
-        <mat-card *ngFor="let supply of supplies" class="supply-item">
+        <mat-card *ngFor="let supply of insumosFiltrados" class="supply-item">
           <div class="supply-content">
             <div class="supply-info">
               <h3>{{supply.name}}</h3>
@@ -160,6 +182,43 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
       padding: 20px;
       max-width: 1400px;
       margin: 0 auto;
+      background: #f5f5f5;
+    }
+
+    .supply-create-toolbar {
+      position: sticky;
+      top: calc(var(--app-safe-top) + var(--topbar-height) + 12px);
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+      width: 100%;
+      margin: 0 0 24px;
+      padding: 14px 16px;
+      box-sizing: border-box;
+      background: var(--color-superficie);
+      border: 1px solid var(--color-borde);
+      border-radius: var(--radio-lg);
+      box-shadow: var(--sombra-sm);
+    }
+
+    .supply-search-field {
+      flex: 1 1 360px;
+      max-width: 520px;
+      margin-right: auto;
+    }
+
+    .add-supply-button {
+      flex: 0 0 auto;
+      min-height: 44px;
+      background: var(--color-accent) !important;
+      color: #fff !important;
+      box-shadow: 0 8px 18px rgba(194, 72, 28, 0.2);
+    }
+
+    .add-supply-button:hover {
+      background: var(--color-accent-hover) !important;
     }
 
     .form-card {
@@ -254,6 +313,21 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
         padding: 12px;
       }
 
+      .supply-create-toolbar {
+        align-items: stretch;
+        padding: 12px;
+        flex-direction: column;
+      }
+
+      .supply-search-field {
+        width: 100%;
+        max-width: none;
+      }
+
+      .add-supply-button {
+        align-self: flex-end;
+      }
+
       .supply-content {
         grid-template-columns: 1fr;
         gap: 12px;
@@ -276,6 +350,7 @@ import { BlankZeroNumberDirective } from '../../../shared/directives/blank-zero-
 })
 export class SuppliesAdminComponent implements OnInit {
   supplies: Supply[] = [];
+  terminoBusqueda = '';
   editingSupply: Supply | null = null;
 
   categories: SupplyCategory[] = [];
@@ -299,6 +374,26 @@ export class SuppliesAdminComponent implements OnInit {
   async ngOnInit() {
     await this.loadCategories();
     await this.loadSupplies();
+  }
+
+  get insumosFiltrados(): Supply[] {
+    const terminoNormalizado = this.terminoBusqueda.trim().toLocaleLowerCase('es-MX');
+    if (!terminoNormalizado) {
+      return this.supplies;
+    }
+
+    return this.supplies.filter(supply => {
+      const contenidoBuscable = [
+        supply.name,
+        this.getSupplyCategoryName(supply),
+        supply.unit,
+        supply.active ? 'Activo' : 'Inactivo'
+      ]
+        .join(' ')
+        .toLocaleLowerCase('es-MX');
+
+      return contenidoBuscable.includes(terminoNormalizado);
+    });
   }
 
   async loadCategories() {
