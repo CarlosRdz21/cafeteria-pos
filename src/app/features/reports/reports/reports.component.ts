@@ -235,80 +235,88 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
               </mat-card>
             </div>
 
-            <mat-card class="chart-card">
-              <mat-card-header>
-                <mat-card-title>Resumen Financiero del Período</mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="finance-summary-grid">
-                  <div class="finance-summary-item income">
-                    <span class="mini-caption">Ventas finales</span>
-                    <strong>\${{financialSummary.grossSales.toFixed(2)}}</strong>
-                  </div>
-                  <div class="finance-summary-item expenses">
-                    <span class="mini-caption">Gastos registrados</span>
-                    <strong>\${{financialSummary.totalExpenses.toFixed(2)}}</strong>
-                  </div>
-                  <div class="finance-summary-item profit" [class.negative]="financialSummary.netProfit < 0">
-                    <span class="mini-caption">Ganancia neta</span>
-                    <strong>\${{financialSummary.netProfit.toFixed(2)}}</strong>
-                  </div>
-                  <div class="finance-summary-item margin" [class.negative]="financialSummary.profitMargin < 0">
-                    <span class="mini-caption">Margen</span>
-                    <strong>{{financialSummary.profitMargin.toFixed(1)}}%</strong>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-
             <!-- Gráfico de métodos de pago -->
-            <mat-card class="chart-card">
+            <mat-card class="chart-card payment-distribution-card">
               <mat-card-header>
                 <mat-card-title>Distribución de Pagos</mat-card-title>
               </mat-card-header>
               <mat-card-content>
-                <div class="payment-chart">
-                  <div class="chart-bars">
-                    <div class="bar-container">
-                      <div
-                        class="bar cash"
-                        [style.height.%]="getPercentage(stats.cashSales)"
-                      ></div>
-                      <span class="bar-label">Efectivo</span>
-                      <span class="bar-value">\${{stats.cashSales.toFixed(2)}}</span>
-                      <span class="bar-percent">{{getPercentage(stats.cashSales).toFixed(0)}}%</span>
+                <div class="payment-dashboard" [class.no-sales]="stats.totalSales <= 0">
+                  <div class="payment-donut-column">
+                    <div
+                      class="payment-donut"
+                      [style.background]="getPaymentDonutBackground()"
+                      role="img"
+                      [attr.aria-label]="getPaymentDistributionAriaLabel()"
+                    >
+                      <div class="payment-donut-center">
+                        <strong>{{getPrimaryPaymentPercentage().toFixed(1)}}%</strong>
+                        <span>Total</span>
+                        <b>{{formatCurrency(stats.totalSales)}}</b>
+                      </div>
                     </div>
-                    <div class="bar-container">
-                      <div
-                        class="bar card"
-                        [style.height.%]="getPercentage(stats.cardSales)"
-                      ></div>
-                      <span class="bar-label">Tarjeta</span>
-                      <span class="bar-value">\${{stats.cardSales.toFixed(2)}}</span>
-                      <span class="bar-percent">{{getPercentage(stats.cardSales).toFixed(0)}}%</span>
+                    <span class="payment-empty-label" *ngIf="stats.totalSales <= 0">Sin ventas registradas</span>
+                  </div>
+
+                  <div class="payment-breakdown" aria-label="Desglose por método de pago">
+                    <div class="payment-row">
+                      <div class="payment-row-heading">
+                        <span class="payment-legend cash"></span>
+                        <strong>Efectivo</strong>
+                      </div>
+                      <div class="payment-progress" aria-hidden="true">
+                        <span class="cash" [style.width.%]="getPercentage(stats.cashSales)"></span>
+                      </div>
+                      <span class="payment-percent">{{getPercentage(stats.cashSales).toFixed(1)}}%</span>
+                      <strong class="payment-amount">{{formatCurrency(stats.cashSales)}}</strong>
+                    </div>
+
+                    <div class="payment-row">
+                      <div class="payment-row-heading">
+                        <span class="payment-legend card"></span>
+                        <strong>Tarjeta</strong>
+                      </div>
+                      <div class="payment-progress" aria-hidden="true">
+                        <span class="card" [style.width.%]="getPercentage(stats.cardSales)"></span>
+                      </div>
+                      <span class="payment-percent">{{getPercentage(stats.cardSales).toFixed(1)}}%</span>
+                      <strong class="payment-amount">{{formatCurrency(stats.cardSales)}}</strong>
                     </div>
                   </div>
+
+                  <aside class="primary-payment-summary">
+                    <span>Método principal</span>
+                    <strong>
+                      <mat-icon aria-hidden="true">{{getPrimaryPaymentIcon()}}</mat-icon>
+                      {{getPrimaryPaymentMethod()}}
+                    </strong>
+                    <span>Participación</span>
+                    <b>{{getPrimaryPaymentPercentage().toFixed(1)}}%</b>
+                  </aside>
                 </div>
               </mat-card-content>
             </mat-card>
 
-            <mat-card class="chart-card">
+            <mat-card class="chart-card promotions-performance-card">
               <mat-card-header>
                 <mat-card-title>Rendimiento de promociones</mat-card-title>
               </mat-card-header>
               <mat-card-content>
                 <div class="promotion-kpi-grid" *ngIf="promotionStats.promotionalOrders > 0; else noPromotionData">
                   <div class="promotion-kpi">
+                    <mat-icon aria-hidden="true">redeem</mat-icon>
                     <span class="mini-caption">Órdenes con promoción</span>
                     <strong>{{promotionStats.promotionalOrders}}</strong>
                   </div>
                   <div class="promotion-kpi">
+                    <mat-icon aria-hidden="true">shopping_cart</mat-icon>
                     <span class="mini-caption">Venta final</span>
-                    <strong>\${{promotionStats.promotionalSales.toFixed(2)}}</strong>
+                    <strong>{{formatCurrency(promotionStats.promotionalSales)}}</strong>
                   </div>
                   <div class="promotion-kpi">
+                    <mat-icon aria-hidden="true">sell</mat-icon>
                     <span class="mini-caption">Descuento aplicado</span>
-                    <strong>\${{promotionStats.promotionalDiscountTotal.toFixed(2)}}</strong>
+                    <strong>{{formatCurrency(promotionStats.promotionalDiscountTotal)}}</strong>
                   </div>
                 </div>
 
@@ -319,8 +327,8 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                       <div class="promotion-meta">{{item.orderCount}} órdenes</div>
                     </div>
                     <div class="promotion-values">
-                      <span>Venta: \${{item.salesTotal.toFixed(2)}}</span>
-                      <strong>Desc: \${{item.discountTotal.toFixed(2)}}</strong>
+                      <span>Venta: {{formatCurrency(item.salesTotal)}}</span>
+                      <strong>Desc: {{formatCurrency(item.discountTotal)}}</strong>
                     </div>
                   </div>
                 </div>
@@ -337,15 +345,30 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
             <div class="dashboard-mini-grid">
               <mat-card class="mini-chart-card">
                 <mat-card-header>
-                  <mat-card-title>Ventas por día de la semana</mat-card-title>
+                  <div class="chart-heading-row">
+                    <mat-card-title>Ventas por día de la semana</mat-card-title>
+                    <span class="chart-insight" *ngIf="hasWeekdaySales()">
+                      Mejor día: <strong>{{getTopWeekdayLabel()}}</strong>
+                    </span>
+                  </div>
                 </mat-card-header>
                 <mat-card-content>
-                  <div class="weekday-chart" *ngIf="weekdaySales.length > 0; else noWeekdaySales">
-                    <div class="weekday-target-line" [style.bottom.%]="getWeekdayTargetLineBottom()"></div>
-                    <div class="weekday-columns">
-                      <div class="weekday-col" *ngFor="let item of weekdaySales" [title]="item.label + ': $' + item.total.toFixed(2)">
-                        <div class="weekday-col-bar" [style.height.%]="getWeekdaySalesBarHeight(item.total)"></div>
-                        <div class="weekday-col-label">{{item.shortLabel}}</div>
+                  <div class="weekday-chart" *ngIf="hasWeekdaySales(); else noWeekdaySales">
+                    <div class="chart-y-axis" aria-hidden="true">
+                      <span *ngFor="let tick of getWeekdayAxisTicks()">{{formatCompactCurrency(tick)}}</span>
+                    </div>
+                    <div class="weekday-plot">
+                      <div class="chart-grid-lines" aria-hidden="true">
+                        <span *ngFor="let tick of getWeekdayAxisTicks()"></span>
+                      </div>
+                      <div class="weekday-columns">
+                        <div class="weekday-col" *ngFor="let item of weekdaySales" [title]="item.label + ' · Ventas: ' + formatCurrency(item.total)">
+                          <span class="weekday-col-value" [class.zero]="item.total <= 0">{{formatCompactCurrency(item.total)}}</span>
+                          <div class="weekday-bar-slot">
+                            <div class="weekday-col-bar" [style.height.%]="getWeekdaySalesBarHeight(item.total)"></div>
+                          </div>
+                          <div class="weekday-col-label">{{item.shortLabel}}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -360,41 +383,44 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
 
               <mat-card class="mini-chart-card hour-bars-card">
                 <mat-card-header>
-                  <mat-card-title>Ventas por Hora</mat-card-title>
+                  <div class="chart-heading-row">
+                    <mat-card-title>Ventas por Hora</mat-card-title>
+                    <span class="chart-insight success" *ngIf="hasHourlySales()">
+                      Hora más fuerte: <strong>{{getTopHourLabel()}}</strong>
+                    </span>
+                  </div>
                 </mat-card-header>
                 <mat-card-content>
-                  <div class="hour-bars-chart" *ngIf="hourlySalesVisible.length > 0; else noHourlySales">
-                    <div class="hour-bars-header">
-                      <div>
-                        <div class="mini-caption">Hora más fuerte</div>
-                        <div class="mini-highlight">{{getTopHourLabel()}}</div>
+                  <div class="hour-bars-chart" *ngIf="hasHourlySales(); else noHourlySales">
+                    <div class="hour-chart-layout">
+                      <div class="chart-y-axis" aria-hidden="true">
+                        <span *ngFor="let tick of getHourlyAxisTicks()">{{formatCompactCurrency(tick)}}</span>
                       </div>
-                      <div class="mini-total">\${{getTopHourTotal().toFixed(2)}}</div>
-                    </div>
-                    <div class="hour-line-wrap">
-                      <svg class="hour-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <line class="hour-grid-line" x1="0" x2="100" y1="20" y2="20"></line>
-                        <line class="hour-grid-line" x1="0" x2="100" y1="40" y2="40"></line>
-                        <line class="hour-grid-line" x1="0" x2="100" y1="60" y2="60"></line>
-                        <line class="hour-grid-line" x1="0" x2="100" y1="80" y2="80"></line>
-                        <line class="hour-target-svg" x1="0" x2="100" [attr.y1]="100 - getHourlyTargetLineBottom()" [attr.y2]="100 - getHourlyTargetLineBottom()"></line>
-                        <polyline class="hour-line-path" [attr.points]="getHourlyLinePoints()"></polyline>
-                        <g *ngFor="let item of hourlySalesVisible; let i = index">
-                          <circle
-                            class="hour-line-dot"
-                            [attr.cx]="getHourlyPointX(i)"
-                            [attr.cy]="getHourlyPointY(item.total)"
-                            [attr.r]="isTopHourPoint(item) ? 2.4 : 1.7"
-                            [attr.fill]="isTopHourPoint(item) ? '#ffd54f' : '#fff'"
-                            [attr.stroke]="isTopHourPoint(item) ? '#f9a825' : '#34b56f'"
-                            [attr.stroke-width]="isTopHourPoint(item) ? 1.2 : 0.9"
-                          >
-                            <title>{{item.label}}: \${{item.total.toFixed(2)}}</title>
-                          </circle>
-                        </g>
-                      </svg>
-                      <div class="hour-x-labels" [style.gridTemplateColumns]="'repeat(' + hourlySalesVisible.length + ', minmax(0,1fr))'">
-                        <span class="hour-x-label" *ngFor="let item of hourlySalesVisible; let i = index">{{getHourAxisLabel(item, i)}}</span>
+                      <div class="hour-line-wrap">
+                        <svg class="hour-line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" [attr.aria-label]="'Ventas por hora. Pico ' + getTopHourLabel() + ', ' + formatCurrency(getTopHourTotal())">
+                          <line class="hour-grid-line" x1="0" x2="100" y1="0" y2="0"></line>
+                          <line class="hour-grid-line" x1="0" x2="100" y1="25" y2="25"></line>
+                          <line class="hour-grid-line" x1="0" x2="100" y1="50" y2="50"></line>
+                          <line class="hour-grid-line" x1="0" x2="100" y1="75" y2="75"></line>
+                          <line class="hour-grid-line" x1="0" x2="100" y1="100" y2="100"></line>
+                          <polygon class="hour-area-path" [attr.points]="getHourlyAreaPoints()"></polygon>
+                          <polyline class="hour-line-path" [attr.points]="getHourlyLinePoints()"></polyline>
+                          <g *ngFor="let item of hourlySalesVisible; let i = index">
+                            <circle
+                              class="hour-line-dot"
+                              [class.zero]="item.total <= 0"
+                              [class.peak]="isTopHourPoint(item)"
+                              [attr.cx]="getHourlyPointX(i)"
+                              [attr.cy]="getHourlyPointY(item.total)"
+                              [attr.r]="item.total <= 0 ? 0.65 : (isTopHourPoint(item) ? 1.9 : 1.15)"
+                            >
+                              <title>{{formatHourLabel(item.hour)}} · Ventas: {{formatCurrency(item.total)}}</title>
+                            </circle>
+                          </g>
+                        </svg>
+                        <div class="hour-x-labels" [style.gridTemplateColumns]="'repeat(' + hourlySalesVisible.length + ', minmax(0,1fr))'">
+                          <span class="hour-x-label" *ngFor="let item of hourlySalesVisible; let i = index">{{getHourAxisLabel(item, i)}}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -407,6 +433,32 @@ type ReportPeriod = 'today' | 'week' | 'month' | 'custom';
                 </mat-card-content>
               </mat-card>
             </div>
+
+            <mat-card class="chart-card financial-summary-card">
+              <mat-card-header>
+                <mat-card-title>Resumen Financiero del Período</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="finance-summary-grid">
+                  <div class="finance-summary-item income">
+                    <span class="mini-caption">Ventas finales</span>
+                    <strong>{{formatCurrency(financialSummary.grossSales)}}</strong>
+                  </div>
+                  <div class="finance-summary-item expenses">
+                    <span class="mini-caption">Gastos registrados</span>
+                    <strong>{{formatCurrency(financialSummary.totalExpenses)}}</strong>
+                  </div>
+                  <div class="finance-summary-item profit" [class.negative]="financialSummary.netProfit < 0">
+                    <span class="mini-caption">Ganancia neta</span>
+                    <strong>{{formatCurrency(financialSummary.netProfit)}}</strong>
+                  </div>
+                  <div class="finance-summary-item margin" [class.negative]="financialSummary.profitMargin < 0">
+                    <span class="mini-caption">Margen</span>
+                    <strong>{{financialSummary.profitMargin.toFixed(1)}}%</strong>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
           </div>
         </mat-tab>
 
@@ -1586,6 +1638,18 @@ export class ReportsComponent implements OnInit {
   private deletingExpenseIds = new Set<number>();
   private printingOrderIds = new Set<number>();
   private latestReportRequest = 0;
+  private readonly currencyFormatter = new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  private readonly compactCurrencyFormatter = new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
 
   constructor(
     private orderService: OrderService,
@@ -1840,6 +1904,45 @@ export class ReportsComponent implements OnInit {
     return (amount / this.stats.totalSales) * 100;
   }
 
+  formatCurrency(amount: number): string {
+    return this.currencyFormatter.format(Number(amount) || 0);
+  }
+
+  formatCompactCurrency(amount: number): string {
+    return this.compactCurrencyFormatter.format(Number(amount) || 0);
+  }
+
+  getPaymentDonutBackground(): string {
+    if (this.stats.totalSales <= 0) {
+      return 'conic-gradient(var(--color-divider) 0% 100%)';
+    }
+
+    const cashPercentage = Math.min(100, Math.max(0, this.getPercentage(this.stats.cashSales)));
+    return `conic-gradient(var(--color-exito) 0% ${cashPercentage}%, var(--color-info) ${cashPercentage}% 100%)`;
+  }
+
+  getPaymentDistributionAriaLabel(): string {
+    if (this.stats.totalSales <= 0) return 'Sin ventas registradas';
+    return `Efectivo ${this.getPercentage(this.stats.cashSales).toFixed(1)} por ciento, ${this.formatCurrency(this.stats.cashSales)}. Tarjeta ${this.getPercentage(this.stats.cardSales).toFixed(1)} por ciento, ${this.formatCurrency(this.stats.cardSales)}.`;
+  }
+
+  getPrimaryPaymentMethod(): string {
+    if (this.stats.totalSales <= 0) return 'Sin ventas';
+    return this.stats.cashSales >= this.stats.cardSales ? 'Efectivo' : 'Tarjeta';
+  }
+
+  getPrimaryPaymentIcon(): string {
+    return this.stats.cashSales >= this.stats.cardSales ? 'payments' : 'credit_card';
+  }
+
+  getPrimaryPaymentPercentage(): number {
+    if (this.stats.totalSales <= 0) return 0;
+    return Math.max(
+      this.getPercentage(this.stats.cashSales),
+      this.getPercentage(this.stats.cardSales)
+    );
+  }
+
   formatDate(date: string | Date): string {
     return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: es });
   }
@@ -2056,9 +2159,25 @@ export class ReportsComponent implements OnInit {
   }
 
   getWeekdaySalesBarHeight(total: number): number {
-    const max = Math.max(...this.weekdaySales.map(item => item.total), 0);
-    if (max <= 0) return 0;
-    return Math.max(3, (total / max) * 100);
+    if (total <= 0) return 0;
+    const max = this.getChartScaleMaximum(this.weekdaySales.map(item => item.total));
+    return Math.min(100, (total / max) * 100);
+  }
+
+  hasWeekdaySales(): boolean {
+    return this.weekdaySales.some(item => item.total > 0);
+  }
+
+  getWeekdayAxisTicks(): number[] {
+    return this.getChartAxisTicks(this.weekdaySales.map(item => item.total));
+  }
+
+  getTopWeekdayLabel(): string {
+    return this.getTopWeekdayPoint()?.label ?? '--';
+  }
+
+  getTopWeekdayTotal(): number {
+    return this.getTopWeekdayPoint()?.total ?? 0;
   }
 
   getWeekdayTargetTotal(): number {
@@ -2079,16 +2198,28 @@ export class ReportsComponent implements OnInit {
       .join(' ');
   }
 
+  getHourlyAreaPoints(): string {
+    const linePoints = this.getHourlyLinePoints();
+    return linePoints ? `1,100 ${linePoints} 99,100` : '';
+  }
+
   getHourlyPointX(index: number): number {
-    if (this.hourlySalesVisible.length <= 1) return 0;
-    return (index / (this.hourlySalesVisible.length - 1)) * 100;
+    if (this.hourlySalesVisible.length <= 1) return 50;
+    return 1 + (index / (this.hourlySalesVisible.length - 1)) * 98;
   }
 
   getHourlyPointY(total: number): number {
-    const max = Math.max(...this.hourlySalesVisible.map(item => item.total), 0);
-    if (max <= 0) return 96;
-    const height = Math.max(6, (total / max) * 86);
-    return 100 - height;
+    if (total <= 0) return 100;
+    const max = this.getChartScaleMaximum(this.hourlySalesVisible.map(item => item.total));
+    return 100 - Math.min(100, (total / max) * 100);
+  }
+
+  hasHourlySales(): boolean {
+    return this.hourlySalesVisible.some(item => item.total > 0);
+  }
+
+  getHourlyAxisTicks(): number[] {
+    return this.getChartAxisTicks(this.hourlySalesVisible.map(item => item.total));
   }
 
   getHourlyTargetTotal(): number {
@@ -2104,9 +2235,12 @@ export class ReportsComponent implements OnInit {
   }
 
   getHourAxisLabel(item: HourlySalesPoint, index: number): string {
-    if (index === 0) return '7:30a';
-    if (index === this.hourlySalesVisible.length - 1) return '10:30p';
-    return item.hour % 2 === 0 ? this.formatHourCompact(item.hour) : '';
+    const isEndpoint = index === 0 || index === this.hourlySalesVisible.length - 1;
+    return isEndpoint || item.hour % 2 === 0 ? this.formatHourLabel(item.hour) : '';
+  }
+
+  formatHourLabel(hour: number): string {
+    return `${hour.toString().padStart(2, '0')}:00`;
   }
 
   getTopHourLabel(): string {
@@ -2127,10 +2261,24 @@ export class ReportsComponent implements OnInit {
     return this.hourlySalesVisible.reduce((max, current) => current.total > max.total ? current : max);
   }
 
-  private formatHourCompact(hour: number): string {
-    const suffix = hour >= 12 ? 'p' : 'a';
-    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-    return `${hour12}${suffix}`;
+  private getTopWeekdayPoint(): WeekdaySalesPoint | null {
+    if (!this.hasWeekdaySales()) return null;
+    return this.weekdaySales.reduce((max, current) => current.total > max.total ? current : max);
+  }
+
+  private getChartAxisTicks(values: number[]): number[] {
+    const max = this.getChartScaleMaximum(values);
+    return [max, max * 0.75, max * 0.5, max * 0.25, 0];
+  }
+
+  private getChartScaleMaximum(values: number[]): number {
+    const highest = Math.max(...values, 0);
+    if (highest <= 0) return 100;
+
+    const magnitude = 10 ** Math.floor(Math.log10(highest));
+    const step = Math.max(1, magnitude);
+    const rounded = Math.ceil(highest / step) * step;
+    return rounded <= highest ? rounded + step : rounded;
   }
 
   private getPaymentReportAmount(payment: Payment): number {
@@ -2167,5 +2315,3 @@ export class ReportsComponent implements OnInit {
     this.router.navigate(['/pos']);
   }
 }
-
-

@@ -144,3 +144,36 @@ describe('carga de reportes', () => {
     expect(componente.stats.totalOrders).toBe(1);
   });
 });
+
+describe('presentación del resumen de reportes', () => {
+  it('representa una distribución mixta de efectivo y tarjeta con datos reales', () => {
+    const { componente } = crearComponente();
+    componente.stats.totalSales = 760;
+    componente.stats.cashSales = 500;
+    componente.stats.cardSales = 260;
+
+    expect(componente.getPercentage(componente.stats.cashSales)).toBeCloseTo(65.79, 2);
+    expect(componente.getPercentage(componente.stats.cardSales)).toBeCloseTo(34.21, 2);
+    expect(componente.getPaymentDonutBackground()).toContain('65.789');
+    expect(componente.getPrimaryPaymentMethod()).toBe('Efectivo');
+  });
+
+  it('mantiene en cero las barras sin ventas', () => {
+    const { componente } = crearComponente();
+    componente.weekdaySales = [
+      { label: 'Lunes', shortLabel: 'Lun', total: 0 },
+      { label: 'Martes', shortLabel: 'Mar', total: 100 }
+    ];
+
+    expect(componente.getWeekdaySalesBarHeight(0)).toBe(0);
+    expect(componente.getWeekdaySalesBarHeight(100)).toBeGreaterThan(0);
+  });
+
+  it('muestra las horas del eje en formato de 24 horas', () => {
+    const { componente } = crearComponente();
+
+    expect(componente.formatHourLabel(7)).toBe('07:00');
+    expect(componente.formatHourLabel(13)).toBe('13:00');
+    expect(componente.formatHourLabel(22)).toBe('22:00');
+  });
+});

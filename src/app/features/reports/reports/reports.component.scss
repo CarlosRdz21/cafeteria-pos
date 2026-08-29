@@ -292,9 +292,494 @@
   color: var(--color-primary);
 }
 
+/* Dashboard del Resumen */
+:host ::ng-deep .payment-distribution-card,
+:host ::ng-deep .promotions-performance-card,
+:host ::ng-deep .financial-summary-card {
+  margin-bottom: 16px;
+}
+
+:host ::ng-deep .chart-card mat-card-header,
+:host ::ng-deep .mini-chart-card mat-card-header {
+  min-height: 42px;
+  padding: 15px 16px 8px;
+}
+
+:host ::ng-deep .chart-card mat-card-content,
+:host ::ng-deep .mini-chart-card mat-card-content {
+  padding: 10px 16px 16px;
+}
+
+:host ::ng-deep .payment-dashboard {
+  display: grid;
+  min-height: 158px;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(360px, 2.2fr) minmax(180px, 0.8fr);
+  align-items: center;
+  gap: clamp(18px, 3vw, 42px);
+}
+
+:host ::ng-deep .payment-donut-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+:host ::ng-deep .payment-donut {
+  display: grid;
+  width: 132px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(18, 61, 50, 0.06);
+  transition: background 220ms ease;
+}
+
+:host ::ng-deep .payment-donut-center {
+  display: flex;
+  width: 88px;
+  aspect-ratio: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  color: var(--color-texto-secundario);
+  background: var(--color-superficie);
+  border-radius: 50%;
+  box-shadow: 0 1px 8px rgba(18, 61, 50, 0.08);
+}
+
+:host ::ng-deep .payment-donut-center strong {
+  color: var(--color-primary);
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+:host ::ng-deep .payment-donut-center span {
+  font-size: 0.67rem;
+}
+
+:host ::ng-deep .payment-donut-center b {
+  color: var(--color-primary);
+  font-size: 0.82rem;
+}
+
+:host ::ng-deep .payment-empty-label {
+  color: var(--color-texto-tenue);
+  font-size: 0.75rem;
+}
+
+:host ::ng-deep .payment-breakdown {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 22px;
+}
+
+:host ::ng-deep .payment-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.7fr) minmax(120px, 2fr) 64px minmax(92px, auto);
+  align-items: center;
+  gap: 12px;
+}
+
+:host ::ng-deep .payment-row-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-texto);
+}
+
+:host ::ng-deep .payment-legend {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+:host ::ng-deep .payment-legend.cash,
+:host ::ng-deep .payment-progress .cash {
+  background: var(--color-exito);
+}
+
+:host ::ng-deep .payment-legend.card,
+:host ::ng-deep .payment-progress .card {
+  background: var(--color-info);
+}
+
+:host ::ng-deep .payment-progress {
+  height: 9px;
+  overflow: hidden;
+  background: var(--color-divider);
+  border-radius: 999px;
+}
+
+:host ::ng-deep .payment-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 220ms ease;
+}
+
+:host ::ng-deep .payment-percent {
+  color: var(--color-texto-secundario);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+:host ::ng-deep .payment-amount {
+  color: var(--color-texto);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+:host ::ng-deep .primary-payment-summary {
+  display: flex;
+  min-height: 126px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding-left: clamp(18px, 2.4vw, 34px);
+  border-left: 1px solid var(--color-borde);
+}
+
+:host ::ng-deep .primary-payment-summary > span {
+  color: var(--color-texto-tenue);
+  font-size: 0.72rem;
+}
+
+:host ::ng-deep .primary-payment-summary strong {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-radius: var(--radio-sm);
+}
+
+:host ::ng-deep .primary-payment-summary mat-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--color-exito);
+  font-size: 20px;
+}
+
+:host ::ng-deep .primary-payment-summary b {
+  color: var(--color-exito);
+  font-size: 1.25rem;
+}
+
+:host ::ng-deep .promotion-kpi-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+:host ::ng-deep .promotion-kpi {
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+:host ::ng-deep .promotion-kpi mat-icon {
+  width: 22px;
+  height: 22px;
+  grid-row: 1 / 3;
+  justify-self: center;
+  color: var(--color-accent);
+  font-size: 22px;
+}
+
+:host ::ng-deep .promotion-kpi strong {
+  font-size: 1.05rem;
+}
+
+:host ::ng-deep .promotion-breakdown {
+  gap: 7px;
+}
+
+:host ::ng-deep .promotion-breakdown-row {
+  padding: 8px 12px;
+}
+
+:host ::ng-deep .dashboard-mini-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+:host ::ng-deep .mini-chart-card {
+  display: flex;
+  min-width: 0;
+  min-height: 318px;
+  flex-direction: column;
+}
+
+:host ::ng-deep .mini-chart-card mat-card-header,
+:host ::ng-deep .mini-chart-card mat-card-content,
+:host ::ng-deep .chart-heading-row {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+:host ::ng-deep .mini-chart-card mat-card-content {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+:host ::ng-deep .chart-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+:host ::ng-deep .chart-insight {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid rgba(194, 72, 28, 0.18);
+  border-radius: 999px;
+  font-size: 0.68rem;
+}
+
+:host ::ng-deep .chart-insight.success {
+  color: var(--color-exito);
+  background: var(--color-primary-soft);
+  border-color: rgba(62, 122, 87, 0.18);
+}
+
+:host ::ng-deep .weekday-chart,
+:host ::ng-deep .hour-chart-layout {
+  display: grid;
+  min-width: 0;
+  height: 238px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 8px;
+}
+
+:host ::ng-deep .chart-y-axis {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0 0 23px;
+  color: var(--color-texto-tenue);
+  font-size: 0.62rem;
+  text-align: right;
+}
+
+:host ::ng-deep .weekday-plot {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+}
+
+:host ::ng-deep .chart-grid-lines {
+  position: absolute;
+  inset: 0 0 23px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+:host ::ng-deep .chart-grid-lines span {
+  width: 100%;
+  border-top: 1px solid rgba(37, 33, 29, 0.1);
+}
+
+:host ::ng-deep .weekday-columns {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(4px, 1vw, 9px);
+  align-items: stretch;
+  padding: 0;
+}
+
+:host ::ng-deep .weekday-col {
+  display: grid;
+  height: 100%;
+  grid-template-rows: 23px minmax(0, 1fr) 23px;
+  gap: 0;
+  align-items: stretch;
+}
+
+:host ::ng-deep .weekday-col-value {
+  overflow: hidden;
+  color: var(--color-texto-secundario);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .weekday-col-value.zero {
+  color: var(--color-texto-tenue);
+  font-weight: 500;
+}
+
+:host ::ng-deep .weekday-bar-slot {
+  display: flex;
+  min-height: 0;
+  align-items: flex-end;
+}
+
+:host ::ng-deep .weekday-col-bar {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  background: linear-gradient(180deg, var(--color-accent), var(--color-caramelo));
+  border-radius: 7px 7px 2px 2px;
+  box-shadow: 0 3px 8px rgba(194, 72, 28, 0.12);
+  transition: height 220ms ease;
+}
+
+:host ::ng-deep .weekday-col-label {
+  align-self: end;
+  color: var(--color-texto-secundario);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+:host ::ng-deep .hour-line-wrap {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+:host ::ng-deep .hour-line-svg {
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  flex: 1;
+  overflow: visible;
+}
+
+:host ::ng-deep .hour-grid-line {
+  stroke: rgba(37, 33, 29, 0.12);
+  stroke-width: 0.45;
+}
+
+:host ::ng-deep .hour-area-path {
+  fill: rgba(62, 122, 87, 0.1);
+  stroke: none;
+}
+
+:host ::ng-deep .hour-line-path {
+  fill: none;
+  stroke: var(--color-exito);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:host ::ng-deep .hour-line-dot {
+  fill: var(--color-superficie);
+  stroke: var(--color-exito);
+  stroke-width: 0.7;
+}
+
+:host ::ng-deep .hour-line-dot.zero {
+  fill: var(--color-divider);
+  stroke-width: 0.35;
+}
+
+:host ::ng-deep .hour-line-dot.peak {
+  fill: var(--color-caramel-soft);
+  stroke: var(--color-exito);
+  stroke-width: 1.05;
+}
+
+:host ::ng-deep .hour-x-labels {
+  min-height: 23px;
+  align-items: end;
+  margin: 0;
+}
+
+:host ::ng-deep .hour-x-label {
+  overflow: visible;
+  color: var(--color-texto-tenue);
+  font-size: 0.59rem;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .financial-summary-card {
+  margin-bottom: 0;
+}
+
+:host ::ng-deep .finance-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+:host ::ng-deep .finance-summary-item {
+  min-width: 0;
+  padding: 11px 13px;
+}
+
+:host ::ng-deep .finance-summary-item strong {
+  overflow: hidden;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  :host ::ng-deep .payment-dashboard {
+    grid-template-columns: 150px minmax(300px, 1fr);
+  }
+
+  :host ::ng-deep .primary-payment-summary {
+    min-height: auto;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--color-borde);
+    border-left: 0;
+  }
+
+  :host ::ng-deep .primary-payment-summary > span:last-of-type {
+    margin-left: 8px;
+  }
+
+  :host ::ng-deep .dashboard-mini-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 900px) {
   :host ::ng-deep .dashboard-mini-grid {
     grid-template-columns: 1fr;
+  }
+
+  :host ::ng-deep .payment-dashboard {
+    grid-template-columns: 140px minmax(0, 1fr);
+  }
+
+  :host ::ng-deep .payment-row {
+    grid-template-columns: minmax(82px, 0.8fr) minmax(100px, 2fr) 56px minmax(82px, auto);
+    gap: 8px;
+  }
+
+  :host ::ng-deep .mini-chart-card {
+    min-height: 310px;
   }
 }
 
@@ -321,6 +806,46 @@
   :host ::ng-deep .kpi-card {
     min-height: 100px;
     padding: 14px;
+  }
+
+  :host ::ng-deep .payment-dashboard {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  :host ::ng-deep .payment-row {
+    grid-template-columns: minmax(82px, 1fr) minmax(80px, 1.6fr) 52px minmax(78px, auto);
+  }
+
+  :host ::ng-deep .primary-payment-summary {
+    grid-column: auto;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  :host ::ng-deep .promotion-kpi-grid,
+  :host ::ng-deep .finance-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  :host ::ng-deep .promotion-breakdown-row {
+    align-items: flex-start;
+  }
+
+  :host ::ng-deep .weekday-chart,
+  :host ::ng-deep .hour-chart-layout {
+    height: 230px;
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  :host ::ng-deep .chart-heading-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  :host ::ng-deep .hour-x-label {
+    font-size: 0.54rem;
   }
 }
 
