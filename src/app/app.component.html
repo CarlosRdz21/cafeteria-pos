@@ -30,7 +30,13 @@
             (click)="cerrarMenuMovil()"
           >
             <mat-icon aria-hidden="true">{{ elemento.icono }}</mat-icon>
-            <span>{{ elemento.etiqueta }}</span>
+            <span>
+              {{
+                elemento.etiqueta === 'Reportes' && usuarioActual.role === 'barista'
+                  ? 'Historial de ventas de hoy'
+                  : elemento.etiqueta
+              }}
+            </span>
           </a>
         </ng-container>
       </nav>
@@ -69,10 +75,16 @@
         </div>
 
         <div class="topbar-meta">
-          <div class="connection-pill" [class.offline]="!estaConectado">
+          <button
+            class="connection-pill"
+            type="button"
+            [class.offline]="!estaConectado"
+            aria-label="Ver estado de conexión"
+            (click)="verEstadoConexion()"
+          >
             <span class="status-dot" aria-hidden="true"></span>
             <span>{{ estaConectado ? 'En línea' : 'Sin conexión' }}</span>
-          </div>
+          </button>
           <div class="date-block">
             <strong>{{ fechaActual | date:'HH:mm' }}</strong>
             <span>{{ fechaActual | date:'dd/MM/yyyy' }}</span>

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { AppComponent } from './app.component';
 import { AuthService, User } from './core/auth/auth.service';
@@ -58,6 +58,19 @@ describe('AppComponent', () => {
     usuarioActual$.next({ id: 1, name: 'Administrador', role: 'admin' });
 
     expect(socketService.connect).toHaveBeenCalled();
+  });
+
+  it('debe abrir la configuración desde el indicador global de conexión', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const router = TestBed.inject(Router);
+    const navegar = spyOn(router, 'navigate').and.resolveTo(true);
+    usuarioActual$.next({ id: 1, name: 'Administrador', role: 'admin' });
+    fixture.detectChanges();
+
+    const indicador = fixture.nativeElement.querySelector('.connection-pill') as HTMLButtonElement;
+    indicador.click();
+
+    expect(navegar).toHaveBeenCalledOnceWith(['/settings']);
   });
 
   it('should disconnect the socket when there is no authenticated user', () => {

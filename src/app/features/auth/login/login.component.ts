@@ -33,7 +33,6 @@ import { finalize } from 'rxjs/operators';
               <img src="assets/images/Logo-Cafeteria.png" alt="Logo Dulce Aroma Cafe" />
             </div>
             <mat-card-title>Dulce Aroma Café POS</mat-card-title>
-            <mat-card-subtitle>Accede a tu espacio de trabajo</mat-card-subtitle>
           </mat-card-header>
 
         <mat-card-content>
@@ -95,16 +94,16 @@ import { finalize } from 'rxjs/operators';
       min-height: var(--app-viewport-height);
       overflow: hidden;
       background:
-        radial-gradient(circle at 15% 15%, rgba(196, 147, 98, 0.2), transparent 30%),
-        radial-gradient(circle at 85% 80%, rgba(111, 166, 111, 0.1), transparent 28%),
-        linear-gradient(145deg, #160c07 0%, var(--color-bg-primary) 46%, #24140c 100%);
+        radial-gradient(circle at 15% 15%, rgba(201, 146, 85, 0.14), transparent 30%),
+        radial-gradient(circle at 85% 80%, rgba(18, 61, 50, 0.06), transparent 28%),
+        var(--color-bg);
       padding: clamp(20px, 4vw, 48px);
     }
 
     .login-container::before,
     .login-container::after {
       position: absolute;
-      border: 1px solid rgba(240, 212, 181, 0.08);
+      border: 1px solid rgba(201, 146, 85, 0.16);
       border-radius: 50%;
       content: '';
       pointer-events: none;
@@ -130,9 +129,9 @@ import { finalize } from 'rxjs/operators';
       width: 100%;
       max-width: 430px;
       padding: clamp(24px, 5vw, 42px);
-      border-color: rgba(240, 212, 181, 0.2) !important;
-      background: rgba(45, 28, 18, 0.94) !important;
-      box-shadow: 0 28px 70px rgba(5, 2, 1, 0.46) !important;
+      border-color: var(--color-border) !important;
+      background: rgba(255, 253, 248, 0.96) !important;
+      box-shadow: 0 24px 60px rgba(54, 43, 33, 0.14) !important;
       backdrop-filter: blur(18px);
     }
 
@@ -151,10 +150,10 @@ import { finalize } from 'rxjs/operators';
       align-items: center;
       margin-bottom: 18px;
       overflow: hidden;
-      border: 1px solid rgba(240, 212, 181, 0.28);
+      border: 1px solid var(--color-border);
       border-radius: 28px;
       background: var(--color-cream-soft);
-      box-shadow: 0 16px 34px rgba(8, 4, 2, 0.3);
+      box-shadow: 0 14px 30px rgba(54, 43, 33, 0.12);
     }
 
     .logo img {
@@ -167,8 +166,9 @@ import { finalize } from 'rxjs/operators';
       font-size: 28px;
       font-weight: 750;
       margin-bottom: 8px;
-      color: var(--color-text-primary);
+      color: var(--color-primary);
       letter-spacing: -0.03em;
+      margin-block: 25px;
     }
 
     mat-card-subtitle {

@@ -130,6 +130,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.menuMovilAbierto = false;
   }
 
+  verEstadoConexion(): void {
+    void this.router.navigate(['/settings']);
+  }
+
   cerrarSesion(): void {
     this.authService.logout();
     void this.router.navigate(['/login']);

@@ -94,7 +94,7 @@ export class UiDialogService {
     .message {
       margin: 0;
       white-space: pre-line;
-      color: rgba(0, 0, 0, 0.75);
+      color: var(--color-text-secondary);
     }
   `]
 })
@@ -166,7 +166,7 @@ export class AppConfirmDialogComponent {
     .message {
       margin: 0 0 12px 0;
       white-space: pre-line;
-      color: rgba(0, 0, 0, 0.75);
+      color: var(--color-text-secondary);
     }
   `]
 })
