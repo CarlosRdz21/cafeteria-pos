@@ -129,6 +129,44 @@ body {
   overscroll-behavior-y: contain;
 }
 
+/* Caja ocupa exactamente el espacio disponible del shell para evitar que el
+   documento y el cuerpo interno de las pestañas generen scroll simultáneo. */
+body:has(app-cash-register) {
+  overflow: hidden;
+}
+
+.route-content:has(app-cash-register) {
+  height: calc(
+    var(--app-viewport-height) - var(--app-safe-top) - var(--app-safe-bottom) -
+      var(--topbar-height)
+  );
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 840px) {
+  .route-content:has(app-cash-register) {
+    height: calc(
+      var(--app-viewport-height) - var(--app-safe-top) - var(--app-safe-bottom) - 72px
+    );
+  }
+}
+
+@media (min-width: 841px) {
+  body:has(app-pos) {
+    overflow: hidden;
+  }
+
+  .route-content:has(app-pos) {
+    height: calc(
+      var(--app-viewport-height) - var(--app-safe-top) - var(--app-safe-bottom) -
+        var(--topbar-height)
+    );
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+
 /* Utilidades */
 .full-width {
   width: 100%;

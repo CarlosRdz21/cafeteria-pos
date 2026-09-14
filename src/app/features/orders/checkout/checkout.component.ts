@@ -144,6 +144,7 @@ export function calcularMontosSugeridos(total: number): number[] {
             <div class="quick-amounts">
               <button
                 mat-raised-button
+                class="quick-amount-button"
                 *ngFor="let amount of quickAmounts"
                 (click)="setQuickAmount(amount)"
               >
@@ -151,6 +152,7 @@ export function calcularMontosSugeridos(total: number): number[] {
               </button>
               <button
                 mat-raised-button
+                class="exact-amount-button"
                 color="accent"
                 (click)="setExactAmount()"
               >
@@ -1003,7 +1005,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         { duration: 3000 }
       );
 
-      this.router.navigate(['/pos']);
+      this.router.navigate([
+        this.pendingOrderId !== null ? '/pending-orders' : '/pos'
+      ]);
 
     } catch (error: any) {
       this.snackBar.open(
@@ -1062,7 +1066,9 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       confirmText: 'Sí, cancelar'
     });
     if (confirmed) {
-      this.router.navigate(['/pos']);
+      this.router.navigate([
+        this.pendingOrderId !== null ? '/pending-orders' : '/pos'
+      ]);
     }
   }
 
@@ -1206,8 +1212,6 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       : this.currentOrder;
   }
 }
-
-
 
 
 

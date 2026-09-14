@@ -144,10 +144,25 @@
 
 :host ::ng-deep .quick-amounts button {
   min-height: 44px;
-  color: var(--color-texto);
-  background: var(--color-superficie-elevada);
-  border: 1px solid var(--color-borde);
+  color: #fff;
+  border: 1px solid transparent;
   border-radius: var(--radio-sm);
+}
+
+:host ::ng-deep .quick-amounts .quick-amount-button {
+  background: #4caf50 !important;
+}
+
+:host ::ng-deep .quick-amounts .quick-amount-button:hover {
+  background: #439a46 !important;
+}
+
+:host ::ng-deep .quick-amounts .exact-amount-button {
+  background: var(--color-accent) !important;
+}
+
+:host ::ng-deep .quick-amounts .exact-amount-button:hover {
+  background: var(--color-accent-hover) !important;
 }
 
 :host ::ng-deep .cash-summary {

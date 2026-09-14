@@ -1,6 +1,8 @@
 :host {
   display: block;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   color: var(--color-text-on-light);
   background: var(--color-fondo);
 }
@@ -22,8 +24,31 @@
 }
 
 :host ::ng-deep .cash-register-container {
-  min-height: calc(100dvh - var(--topbar-altura) - 68px);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: var(--color-fondo);
+}
+
+:host ::ng-deep .mat-mdc-tab-group {
+  height: 100%;
+}
+
+:host ::ng-deep .mat-mdc-tab-body-wrapper {
+  min-height: 0;
+  flex: 1;
+}
+
+:host ::ng-deep .mat-mdc-tab-body-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+:host ::ng-deep .mat-mdc-tab-body-content::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 :host ::ng-deep .mat-mdc-tab-header {
