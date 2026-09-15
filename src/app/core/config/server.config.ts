@@ -11,7 +11,10 @@ declare global {
 }
 
 export function getServerUrl(): string {
-  if (typeof window !== 'undefined' && !HOSTS_LOCALES.has(window.location.hostname)) {
+  const esFrontendWebLocal = typeof window !== 'undefined'
+    && ['http:', 'https:'].includes(window.location.protocol)
+    && HOSTS_LOCALES.has(window.location.hostname);
+  if (typeof window !== 'undefined' && !esFrontendWebLocal) {
     const runtimeUrl = window.__CAFETERIA_POS_CONFIG__?.serverUrl?.trim();
     return validarUrlServidorProduccion(runtimeUrl || window.location.origin);
   }

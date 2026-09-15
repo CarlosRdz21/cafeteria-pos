@@ -89,7 +89,8 @@ Prisma 6.19.3 y el proveedor, y coincidir entre build y ejecución.
 El frontend carga `assets/runtime-config.js`. Si API y frontend comparten origen,
 `serverUrl` queda vacío; si son orígenes distintos, el operador coloca ahí
 exclusivamente la URL base HTTPS pública del backend. Este archivo es público y
-jamás debe contener secretos.
+jamás debe contener secretos. En una compilación Capacitor `serverUrl` es
+obligatoria porque `capacitor://localhost` no es la dirección de la API.
 
 ## 7. Auditoría de dependencias
 
