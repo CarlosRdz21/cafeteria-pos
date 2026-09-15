@@ -2,6 +2,7 @@ import {
   DEFAULT_SERVER_URL,
   getServerUrl,
   guardarUrlServidorLocal,
+  validarUrlServidorProduccion,
   validarUrlServidorLocal
 } from './server.config';
 
@@ -34,5 +35,13 @@ describe('Configuración local del servidor', () => {
   it('guarda solamente una URL local validada', () => {
     expect(guardarUrlServidorLocal('http://localhost:3000/')).toBe(DEFAULT_SERVER_URL);
     expect(localStorage.getItem('serverUrl')).toBe(DEFAULT_SERVER_URL);
+  });
+
+  it('acepta únicamente una URL HTTPS base para producción', () => {
+    expect(validarUrlServidorProduccion('https://backend.example.com/'))
+      .toBe('https://backend.example.com');
+    expect(() => validarUrlServidorProduccion('http://backend.example.com')).toThrow();
+    expect(() => validarUrlServidorProduccion('https://usuario:clave@backend.example.com')).toThrow();
+    expect(() => validarUrlServidorProduccion('https://backend.example.com/api')).toThrow();
   });
 });

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isSocketOriginAllowed = exports.isOriginAllowed = exports.app = void 0;
+exports.isSocketOriginAllowed = exports.isOriginAllowed = exports.resolveAllowedOrigins = exports.app = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -34,7 +34,21 @@ const localAllowedOrigins = [
     'http://127.0.0.1:4200',
 ];
 const normalizeOrigin = (origin) => origin.trim().replace(/\/$/, '');
-const allowedOrigins = new Set(localAllowedOrigins.map(normalizeOrigin));
+const resolveAllowedOrigins = (environment = process.env) => {
+    const configuredOrigins = [
+        environment.FRONTEND_ORIGINS,
+        environment.SOCKET_ORIGINS,
+    ]
+        .flatMap(value => (value || '').split(','))
+        .map(normalizeOrigin)
+        .filter(Boolean);
+    return new Set([
+        ...(environment.NODE_ENV === 'production' ? [] : localAllowedOrigins),
+        ...configuredOrigins,
+    ].map(normalizeOrigin));
+};
+exports.resolveAllowedOrigins = resolveAllowedOrigins;
+const allowedOrigins = (0, exports.resolveAllowedOrigins)();
 const isOriginAllowed = (origin) => {
     if (!origin)
         return true;

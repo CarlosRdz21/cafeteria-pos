@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import jwt from 'jsonwebtoken';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { app } from '../src/app';
+import { app, resolveAllowedOrigins } from '../src/app';
 
 describe('rutas protegidas', () => {
   let server: Server;
@@ -119,5 +119,19 @@ describe('rutas protegidas', () => {
     expect(response.status).toBe(403);
     await expect(response.json()).resolves.toEqual({ error: 'Origin not allowed' });
     expect(response.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('en producción permite sólo los orígenes configurados explícitamente', () => {
+    const origins = resolveAllowedOrigins({
+      NODE_ENV: 'production',
+      FRONTEND_ORIGINS: 'https://frontend.example.com',
+      SOCKET_ORIGINS: 'https://tablet.example.com',
+    });
+
+    expect(origins).toEqual(new Set([
+      'https://frontend.example.com',
+      'https://tablet.example.com',
+    ]));
+    expect(origins.has('http://localhost:4200')).toBe(false);
   });
 });

@@ -33,7 +33,20 @@ const localAllowedOrigins = [
 ];
 
 const normalizeOrigin = (origin: string): string => origin.trim().replace(/\/$/, '');
-const allowedOrigins = new Set(localAllowedOrigins.map(normalizeOrigin));
+export const resolveAllowedOrigins = (environment: NodeJS.ProcessEnv = process.env): Set<string> => {
+  const configuredOrigins = [
+    environment.FRONTEND_ORIGINS,
+    environment.SOCKET_ORIGINS,
+  ]
+    .flatMap(value => (value || '').split(','))
+    .map(normalizeOrigin)
+    .filter(Boolean);
+  return new Set([
+    ...(environment.NODE_ENV === 'production' ? [] : localAllowedOrigins),
+    ...configuredOrigins,
+  ].map(normalizeOrigin));
+};
+const allowedOrigins = resolveAllowedOrigins();
 
 export const isOriginAllowed = (origin?: string): boolean => {
   if (!origin) return true;

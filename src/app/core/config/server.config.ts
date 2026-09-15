@@ -2,7 +2,20 @@ export const DEFAULT_SERVER_URL = 'http://localhost:3000';
 const CLAVE_URL_SERVIDOR = 'serverUrl';
 const HOSTS_LOCALES = new Set(['localhost', '127.0.0.1']);
 
+declare global {
+  interface Window {
+    __CAFETERIA_POS_CONFIG__?: {
+      serverUrl?: string;
+    };
+  }
+}
+
 export function getServerUrl(): string {
+  if (typeof window !== 'undefined' && !HOSTS_LOCALES.has(window.location.hostname)) {
+    const runtimeUrl = window.__CAFETERIA_POS_CONFIG__?.serverUrl?.trim();
+    return validarUrlServidorProduccion(runtimeUrl || window.location.origin);
+  }
+
   if (typeof localStorage !== 'undefined') {
     const savedUrl = localStorage.getItem(CLAVE_URL_SERVIDOR);
     if (savedUrl) {
@@ -48,6 +61,27 @@ export function validarUrlServidorLocal(url: string): string {
 
   if (urlAnalizada.protocol !== 'http:' || !esHostLocal || !esPuertoLocal || !esRutaBase) {
     throw new Error('Sólo se permite el backend local en http://localhost:3000.');
+  }
+
+  return `${urlAnalizada.protocol}//${urlAnalizada.host}`;
+}
+
+export function validarUrlServidorProduccion(url: string): string {
+  let urlAnalizada: URL;
+  try {
+    urlAnalizada = new URL(String(url || '').trim());
+  } catch {
+    throw new Error('La URL productiva del servidor no es válida.');
+  }
+
+  const esRutaBase =
+    (urlAnalizada.pathname === '' || urlAnalizada.pathname === '/') &&
+    !urlAnalizada.search &&
+    !urlAnalizada.hash &&
+    !urlAnalizada.username &&
+    !urlAnalizada.password;
+  if (urlAnalizada.protocol !== 'https:' || !urlAnalizada.hostname || !esRutaBase) {
+    throw new Error('El backend productivo debe usar una URL HTTPS sin credenciales ni rutas.');
   }
 
   return `${urlAnalizada.protocol}//${urlAnalizada.host}`;

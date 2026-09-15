@@ -74,7 +74,27 @@ export function validateEnvironment(environment: Environment = process.env): voi
     for (const origin of origins) {
       if (origin === '*') throw new Error(`${name} no permite el comodín *`);
       assertValidUrl(name, origin, ['http:', 'https:', 'capacitor:']);
+      const parsedOrigin = new URL(origin);
+      const isExactOrigin = Boolean(parsedOrigin.hostname)
+        && (parsedOrigin.pathname === '' || parsedOrigin.pathname === '/')
+        && !parsedOrigin.search
+        && !parsedOrigin.hash
+        && !parsedOrigin.username
+        && !parsedOrigin.password;
+      if (!isExactOrigin) {
+        throw new Error(`${name} sólo permite orígenes exactos sin rutas ni credenciales`);
+      }
+      if (
+        nodeEnvironment === 'production'
+        && !['https:', 'capacitor:'].includes(parsedOrigin.protocol)
+      ) {
+        throw new Error(`${name} debe usar HTTPS o el esquema Capacitor en producción`);
+      }
     }
+  }
+
+  if (nodeEnvironment === 'production' && !environment.FRONTEND_ORIGINS?.trim()) {
+    throw new Error('Falta variable de entorno obligatoria: FRONTEND_ORIGINS');
   }
 
   for (const name of ['MP_SUCCESS_URL', 'MP_PENDING_URL', 'MP_FAILURE_URL'] as const) {

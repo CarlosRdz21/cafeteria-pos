@@ -36,6 +36,31 @@ describe('validateEnvironment', () => {
       .toThrow('comodín');
     expect(() => validateEnvironment({ ...validEnvironment, SOCKET_ORIGINS: '*' }))
       .toThrow('comodín');
+    expect(() => validateEnvironment({
+      ...validEnvironment,
+      FRONTEND_ORIGINS: 'https://cafeteria.example/una-ruta',
+    })).toThrow('orígenes exactos');
+  });
+
+  it('exige un origen HTTPS explícito en producción', () => {
+    expect(() => validateEnvironment({
+      ...validEnvironment,
+      NODE_ENV: 'production',
+      FRONTEND_ORIGINS: '',
+      SOCKET_ORIGINS: '',
+    })).toThrow('FRONTEND_ORIGINS');
+    expect(() => validateEnvironment({
+      ...validEnvironment,
+      NODE_ENV: 'production',
+      FRONTEND_ORIGINS: 'http://cafeteria.example',
+      SOCKET_ORIGINS: '',
+    })).toThrow('HTTPS');
+    expect(() => validateEnvironment({
+      ...validEnvironment,
+      NODE_ENV: 'production',
+      FRONTEND_ORIGINS: 'https://cafeteria.example',
+      SOCKET_ORIGINS: 'capacitor://localhost',
+    })).not.toThrow();
   });
 
   it('exige modo de sólo lectura para el clon histórico', () => {
