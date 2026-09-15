@@ -2282,13 +2282,13 @@ export class ReportsComponent implements OnInit {
   }
 
   private getPaymentReportAmount(payment: Payment): number {
-    const orderTotal = Number(payment.order?.total);
-    if (Number.isFinite(orderTotal) && orderTotal > 0) {
-      return orderTotal;
+    const paymentAmount = Number(payment.amount);
+    if (Number.isFinite(paymentAmount) && paymentAmount >= 0) {
+      return paymentAmount;
     }
 
-    const paymentAmount = Number(payment.amount);
-    return Number.isFinite(paymentAmount) ? paymentAmount : 0;
+    const orderTotal = Number(payment.order?.total);
+    return Number.isFinite(orderTotal) ? orderTotal : 0;
   }
 
   private normalizeAppliedPromotions(value: unknown): AppliedPromotionSummary[] {

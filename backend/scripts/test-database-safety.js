@@ -1,5 +1,6 @@
 const HOSTS_MYSQL_LOCALES = new Set(['localhost', '127.0.0.1']);
 const BASE_MYSQL_LOCAL = 'cafeteria_pos_test';
+const BASE_CLON_TRANSACCIONAL = 'cafeteria_pos_prod_clone_transaction_test';
 const MARCADOR_SERVICIO_REMOTO = /(render|hostinger)/i;
 
 function analizarUrlBaseDatos(valor) {
@@ -66,8 +67,12 @@ function validarConfiguracionBasePruebas(env = process.env, opciones = {}) {
   if (!HOSTS_MYSQL_LOCALES.has(resumen.host.toLowerCase())) {
     throw new Error('La base de pruebas debe usar exclusivamente localhost o 127.0.0.1');
   }
-  if (resumen.nombreBaseDatos !== BASE_MYSQL_LOCAL) {
-    throw new Error(`La base local permitida es exclusivamente ${BASE_MYSQL_LOCAL}`);
+  const usarClonTransaccional = env.ALLOW_PROD_CLONE_TRANSACTION_TEST === 'true';
+  const basePermitida = usarClonTransaccional
+    ? BASE_CLON_TRANSACCIONAL
+    : BASE_MYSQL_LOCAL;
+  if (resumen.nombreBaseDatos !== basePermitida) {
+    throw new Error(`La base local permitida es exclusivamente ${basePermitida}`);
   }
   if (
     MARCADOR_SERVICIO_REMOTO.test(testDatabaseUrl)

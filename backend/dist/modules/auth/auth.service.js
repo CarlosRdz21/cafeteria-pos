@@ -26,7 +26,7 @@ class AuthService {
         if (!credencialesValidas) {
             throw new Error('Invalid credentials');
         }
-        if (!pareceHash) {
+        if (!pareceHash && process.env.CLONE_READ_ONLY !== 'true') {
             const hashContrasenaMigrada = await bcryptjs_1.default.hash(contrasena, 10);
             await auth_repository_1.AuthRepository.updatePassword(usuario.id, hashContrasenaMigrada);
         }

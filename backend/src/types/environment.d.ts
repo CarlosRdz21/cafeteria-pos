@@ -11,6 +11,7 @@ declare global {
       LOGIN_RATE_LIMIT_WINDOW_MS?: string;
       LOGIN_RATE_LIMIT_MAX?: string;
       AUTH_DEBUG_TOKEN?: string;
+      CLONE_READ_ONLY?: string;
       MP_ACCESS_TOKEN?: string;
       MP_SUCCESS_URL?: string;
       MP_PENDING_URL?: string;

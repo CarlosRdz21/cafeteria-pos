@@ -37,4 +37,18 @@ describe('validateEnvironment', () => {
     expect(() => validateEnvironment({ ...validEnvironment, SOCKET_ORIGINS: '*' }))
       .toThrow('comodín');
   });
+
+  it('exige modo de sólo lectura para el clon histórico', () => {
+    const cloneEnvironment = {
+      ...validEnvironment,
+      DATABASE_URL: 'mysql://usuario:contrasena@localhost:3306/cafeteria_pos_prod_clone',
+    };
+
+    expect(() => validateEnvironment(cloneEnvironment))
+      .toThrow('CLONE_READ_ONLY=true');
+    expect(() => validateEnvironment({
+      ...cloneEnvironment,
+      CLONE_READ_ONLY: 'true',
+    })).not.toThrow();
+  });
 });

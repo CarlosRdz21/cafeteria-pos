@@ -146,6 +146,21 @@ describe('carga de reportes', () => {
 });
 
 describe('presentación del resumen de reportes', () => {
+  it('usa el importe realmente cobrado aunque el total histórico de la orden difiera', () => {
+    const { componente } = crearComponente();
+
+    componente.calculateStatsFromPayments([{
+      id: 1455,
+      method: 'cash',
+      amount: 115,
+      paidAt: '2026-09-02T15:12:21.685Z',
+      order: { ...ventaPrueba, id: 1540, total: 378 },
+    }]);
+
+    expect(componente.stats.totalSales).toBe(115);
+    expect(componente.stats.cashSales).toBe(115);
+  });
+
   it('representa una distribución mixta de efectivo y tarjeta con datos reales', () => {
     const { componente } = crearComponente();
     componente.stats.totalSales = 760;

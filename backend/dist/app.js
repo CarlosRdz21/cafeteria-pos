@@ -28,6 +28,7 @@ if (process.env.LOCAL_ENV_FILE_LOADED !== 'true') {
 exports.app = (0, express_1.default)();
 exports.app.disable('x-powered-by');
 const jsonBodyLimit = process.env.JSON_BODY_LIMIT || '10mb';
+const cloneHistoricoSoloLectura = process.env.CLONE_READ_ONLY === 'true';
 const localAllowedOrigins = [
     'http://localhost:4200',
     'http://127.0.0.1:4200',
@@ -59,6 +60,18 @@ exports.app.use((0, cors_1.default)({
 exports.app.use(security_middleware_1.securityHeaders);
 exports.app.use(express_1.default.json({ limit: jsonBodyLimit }));
 exports.app.use(express_1.default.urlencoded({ extended: true, limit: jsonBodyLimit }));
+// La copia histórica de producción se utiliza únicamente para reconciliación.
+// AuthService también evita migrar hashes legacy cuando esta guarda está activa.
+exports.app.use('/api', (req, res, next) => {
+    const metodoSoloLectura = ['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+    const loginLocal = req.method === 'POST' && req.path === '/auth/login';
+    if (cloneHistoricoSoloLectura && !metodoSoloLectura && !loginLocal) {
+        return res.status(403).json({
+            error: 'Clon histórico en modo de sólo lectura',
+        });
+    }
+    return next();
+});
 // Las respuestas de la API reflejan caja, ventas e inventario en tiempo real.
 // Evita que el navegador reutilice una respuesta 304 después de una operación reciente.
 exports.app.use('/api', (_req, res, next) => {

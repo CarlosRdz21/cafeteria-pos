@@ -128,4 +128,30 @@ describe('proteccion central de la base MySQL de pruebas', () => {
       ),
     ).toThrow('ALLOW_DESTRUCTIVE_TESTS=true');
   });
+
+  it('sólo permite el clon transaccional con su bandera explícita', () => {
+    const url = 'mysql://usuario_test:clave-no-real@localhost:3306/cafeteria_pos_prod_clone_transaction_test';
+    const environment = {
+      ...entornoSeguro(),
+      DATABASE_URL: url,
+      TEST_DATABASE_URL: url,
+    };
+
+    expect(() => validarConfiguracionBasePruebas(environment))
+      .toThrow('cafeteria_pos_test');
+    expect(() => validarConfiguracionBasePruebas({
+      ...environment,
+      ALLOW_PROD_CLONE_TRANSACTION_TEST: 'true',
+    })).not.toThrow();
+  });
+
+  it('mantiene bloqueado el clon histórico aun en modo transaccional', () => {
+    const url = 'mysql://usuario_test:clave-no-real@localhost:3306/cafeteria_pos_prod_clone';
+    expect(() => validarConfiguracionBasePruebas({
+      ...entornoSeguro(),
+      DATABASE_URL: url,
+      TEST_DATABASE_URL: url,
+      ALLOW_PROD_CLONE_TRANSACTION_TEST: 'true',
+    })).toThrow('cafeteria_pos_prod_clone_transaction_test');
+  });
 });

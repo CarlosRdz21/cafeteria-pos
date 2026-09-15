@@ -25,6 +25,17 @@ export function validateEnvironment(environment: Environment = process.env): voi
 
   assertValidUrl('DATABASE_URL', environment.DATABASE_URL!, ['mysql:']);
 
+  const databaseUrl = new URL(environment.DATABASE_URL!);
+  const databaseName = decodeURIComponent(databaseUrl.pathname.replace(/^\/+/, ''));
+  if (
+    databaseName === 'cafeteria_pos_prod_clone'
+    && environment.CLONE_READ_ONLY !== 'true'
+  ) {
+    throw new Error(
+      'cafeteria_pos_prod_clone sólo puede iniciar con CLONE_READ_ONLY=true',
+    );
+  }
+
   if (environment.JWT_SECRET!.length < 32) {
     throw new Error('JWT_SECRET debe contener al menos 32 caracteres');
   }

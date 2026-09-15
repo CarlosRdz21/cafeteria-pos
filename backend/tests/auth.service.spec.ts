@@ -7,6 +7,7 @@ import { AuthService } from '../src/modules/auth/auth.service';
 describe('AuthService', () => {
   const jwtSecretAnterior = process.env.JWT_SECRET;
   const jwtExpiresInAnterior = process.env.JWT_EXPIRES_IN;
+  const cloneReadOnlyAnterior = process.env.CLONE_READ_ONLY;
 
   const usuarioBase = {
     id: 7,
@@ -32,6 +33,9 @@ describe('AuthService', () => {
 
     if (jwtExpiresInAnterior === undefined) delete process.env.JWT_EXPIRES_IN;
     else process.env.JWT_EXPIRES_IN = jwtExpiresInAnterior;
+
+    if (cloneReadOnlyAnterior === undefined) delete process.env.CLONE_READ_ONLY;
+    else process.env.CLONE_READ_ONLY = cloneReadOnlyAnterior;
   });
 
   it('inicia sesión con bcrypt y devuelve el contrato actual', async () => {
@@ -87,6 +91,20 @@ describe('AuthService', () => {
       user: { id: 8, role: 'barista' },
     });
     expect(actualizarPassword).toHaveBeenCalledOnce();
+  });
+
+  it('no modifica una contraseña legacy al consultar el clon histórico', async () => {
+    process.env.CLONE_READ_ONLY = 'true';
+    vi.spyOn(AuthRepository, 'findByUsername').mockResolvedValue({
+      ...usuarioBase,
+      password: 'clave-legacy',
+    });
+    const actualizarPassword = vi.spyOn(AuthRepository, 'updatePassword').mockResolvedValue();
+
+    await expect(AuthService.login('administrador', 'clave-legacy')).resolves.toMatchObject({
+      user: { id: 7, role: 'admin' },
+    });
+    expect(actualizarPassword).not.toHaveBeenCalled();
   });
 
   it('responde con el mismo error genérico para un usuario inexistente', async () => {

@@ -34,6 +34,8 @@ export function crearServidor() {
 
 export function iniciarServidor() {
   const { httpServer, io } = crearServidor();
+  const databaseUrl = new URL(process.env.DATABASE_URL!);
+  const databaseName = decodeURIComponent(databaseUrl.pathname.replace(/^\/+/, ''));
   const manejarCierre = crearManejadorCierreControlado({
     servidorHttp: httpServer,
     servidorSocket: io,
@@ -44,7 +46,9 @@ export function iniciarServidor() {
   const port = process.env.PORT || 3000;
   httpServer.listen(port, () => {
     console.info(`[LOCAL] Backend activo en http://localhost:${port}`);
-    console.info('[LOCAL] MySQL validado: localhost:3306/cafeteria_pos_test');
+    console.info(
+      `[LOCAL] MySQL validado: ${databaseUrl.hostname}:${databaseUrl.port}/${databaseName}`,
+    );
   });
 
   return { httpServer, io, manejarCierre };

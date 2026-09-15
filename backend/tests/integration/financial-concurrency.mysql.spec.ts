@@ -30,7 +30,20 @@ function crearRespuesta() {
 }
 
 describirMysql('integridad concurrente del cierre de caja en MySQL', () => {
-  it('parte de una base sin cajas abiertas ajenas a la prueba', async () => {
+  it('preserva la caja histórica abierta y no deja cajas de prueba abiertas', async () => {
+    expect(await prisma.cashRegister.count({
+      where: { status: 'open', userRef: { startsWith: prefijo } },
+    })).toBe(0);
+
+    if (process.env.ALLOW_PROD_CLONE_TRANSACTION_TEST === 'true') {
+      const cajasHistoricas = await prisma.cashRegister.findMany({
+        where: { status: 'open', userRef: { not: { startsWith: prefijo } } },
+        select: { id: true },
+      });
+      expect(cajasHistoricas).toEqual([]);
+      return;
+    }
+
     expect(await prisma.cashRegister.count({ where: { status: 'open' } })).toBe(0);
   });
 
