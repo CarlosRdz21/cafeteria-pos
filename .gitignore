@@ -45,6 +45,7 @@ testem.log
 !**/.env.*.example
 *.sql
 !backend/prisma/migrations/**/migration.sql
+!docs/production-runbook/*.sql
 *.dump
 *.backup
 *.pem
