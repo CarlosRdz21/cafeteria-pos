@@ -6,7 +6,29 @@
 SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 START TRANSACTION READ ONLY;
 
-SELECT DATABASE() AS database_name, @@hostname AS database_host, NOW(3) AS snapshot_at;
+SELECT VERSION() AS mysql_version,
+       DATABASE() AS database_name,
+       @@hostname AS database_host,
+       NOW(3) AS snapshot_at;
+
+SELECT table_name, engine, table_collation
+FROM information_schema.tables
+WHERE table_schema = DATABASE()
+ORDER BY table_name;
+
+SELECT table_name, ordinal_position, column_name, column_type, is_nullable,
+       column_default, extra
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name IN ('Order', 'OrderItem', 'Payment', 'Expense', 'CashRegister')
+ORDER BY table_name, ordinal_position;
+
+SHOW CREATE TABLE `Order`;
+SHOW CREATE TABLE Payment;
+SHOW CREATE TABLE Expense;
+SHOW CREATE TABLE CashRegister;
+SHOW INDEX FROM Payment;
+SHOW INDEX FROM Expense;
 
 SELECT 'Order' AS metric, COUNT(*) AS row_count, ROUND(COALESCE(SUM(total), 0), 2) AS amount FROM `Order`
 UNION ALL SELECT 'OrderItem', COUNT(*), ROUND(COALESCE(SUM(subtotal), 0), 2) FROM OrderItem
@@ -93,5 +115,15 @@ SET @migration_history_sql = IF(
 PREPARE migration_history_statement FROM @migration_history_sql;
 EXECUTE migration_history_statement;
 DEALLOCATE PREPARE migration_history_statement;
+
+-- SHOW CREATE condicional, sin fallar cuando aún no existe el historial Prisma.
+SET @migration_definition_sql = IF(
+  @has_prisma_migrations = 1,
+  'SHOW CREATE TABLE _prisma_migrations',
+  'SELECT ''ABSENT'' AS prisma_migrations_definition'
+);
+PREPARE migration_definition_statement FROM @migration_definition_sql;
+EXECUTE migration_definition_statement;
+DEALLOCATE PREPARE migration_definition_statement;
 
 COMMIT;

@@ -99,15 +99,15 @@ Resultados de preparación:
 
 | Alcance | Resultado |
 | --- | --- |
-| Frontend `npm audit --omit=dev` | 12: 7 moderadas, 4 altas, 1 crítica |
-| Frontend completo | 54: 3 bajas, 24 moderadas, 25 altas, 2 críticas |
+| Frontend `npm audit --omit=dev` | Inicial: 12 (7 moderadas, 4 altas, 1 crítica). Tras 16A.1: 12 (7 moderadas, 5 altas, 0 críticas) |
+| Frontend completo | Inicial: 54 (3 bajas, 24 moderadas, 25 altas, 2 críticas). Tras 16A.1: 54 (3 bajas, 24 moderadas, 26 altas, 1 crítica de tooling) |
 | Backend `npm audit --omit=dev` | 4: 1 moderada, 3 altas |
 | Backend completo | 10: 4 moderadas, 6 altas |
 
-La corrección automática propuesta incluye saltos mayores, entre ellos Angular
-21. Por ello requiere una etapa separada, pruebas completas y una decisión
-explícita. La vulnerabilidad crítica del árbol productivo del frontend es un
-NO-GO actual.
+En 16A.1 se actualizó exclusivamente `@angular/ssr` de `19.2.19` a `19.2.27`,
+dentro de Angular 19 y sin `audit fix`. Esto eliminó la vulnerabilidad crítica
+del árbol productivo. Las correcciones restantes propuestas por npm implican
+saltos mayores o cambios de tooling y quedan para una etapa separada.
 
 ## 8. Estado de migraciones Prisma
 
@@ -312,7 +312,9 @@ aprobadas.
 
 Actualmente se cumple al menos un NO-GO:
 
-- una vulnerabilidad crítica en dependencias productivas del frontend;
+- no quedan vulnerabilidades críticas en dependencias productivas del frontend;
+  permanecen hallazgos altos/moderados evaluados en 16A.1 y pendientes de una
+  actualización mayor controlada;
 - URLs/proveedores productivos exactos y versión Node remota sin confirmar;
 - soporte/configuración productiva de WebSocket y callbacks sin confirmar;
 - backup final, snapshot real e historia `_prisma_migrations` sólo pueden
@@ -347,3 +349,115 @@ NO-GO anteriores deben resolverse o aceptarse formalmente antes de solicitar una
 ejecución productiva.
 
 **ETAPA 16A BLOQUEADA — NO MIGRAR PRODUCCIÓN**
+
+## 25. Etapa 16A.1 — resolución de bloqueos locales
+
+Fecha: 2026-09-19. Esta subsección actualiza la decisión local de la sección 24
+únicamente para permitir solicitar un preflight productivo de solo lectura. No
+autoriza una migración, un despliegue ni acceso productivo con escritura.
+
+### 25.1 Remediación mínima de la vulnerabilidad crítica
+
+La auditoría identificó como crítica productiva la advisory
+`GHSA-x288-3778-4hhx` de Angular SSR (SSRF e inyección de cabeceras), aplicable a
+versiones anteriores a `19.2.21`. La dependencia directa instalada era
+`@angular/ssr@19.2.19`.
+
+Se aplicó exclusivamente la actualización compatible
+`@angular/ssr@19.2.27`, fijada de forma exacta. No se usó `npm audit fix`,
+`--force`, overrides ni salto mayor. El resultado verificado fue:
+
+| Árbol | Antes | Después |
+| --- | --- | --- |
+| Frontend productivo | 7 moderadas, 4 altas, 1 crítica | 7 moderadas, 5 altas, **0 críticas** |
+| Frontend completo | 3 bajas, 24 moderadas, 25 altas, 2 críticas | 3 bajas, 24 moderadas, 26 altas, 1 crítica de tooling |
+| Backend productivo | 1 moderada, 3 altas, 0 críticas | Sin cambios |
+| Backend completo | 4 moderadas, 6 altas, 0 críticas | Sin cambios |
+
+La crítica restante del frontend completo está en `tar`, alcanzado por tooling
+de Angular CLI/Capacitor/pacote. No forma parte del bundle productivo y no existe
+una actualización compatible que resuelva todos los caminos sin override o
+cambio mayor. Se conserva como riesgo de estación de build: instalar sólo desde
+lockfile confiable, no procesar archivos no confiables y actualizar el tooling
+en una etapa separada.
+
+Los hallazgos altos productivos restantes pertenecen principalmente a Angular
+19 (`@angular/common`, `compiler`, `core`, `platform-server` y sus dependencias).
+La última línea 19 instalada no ofrece parche adicional. El build vigente usa
+`@angular-devkit/build-angular:browser` y `src/main.ts`, no el servidor SSR, lo
+que reduce la superficie de los avisos exclusivos de SSR; no elimina los avisos
+del framework. En backend, los altos productivos llegan a `deepmerge-ts` desde
+la configuración/CLI de Prisma; no se encontró una ruta HTTP que reciba grafos
+arbitrarios y alcance ese código.
+
+Plan futuro: actualizar en otra etapa, con commit y rollback propios, Angular
+19→20 y después 20→21, manteniendo alineados framework, CLI, Material/CDK, SSR,
+TypeScript y zone.js. Tras cada salto se deben ejecutar build, pruebas y auditoría.
+No se mezclará Angular 19 con SSR de otra versión mayor ni se seguirá ciegamente
+una sugerencia de `npm audit fix`.
+
+### 25.2 Compatibilidad y configuración
+
+- Node local `22.22.0` es compatible con Angular 19 (`>=22.0.0` en la rama 22)
+  y Prisma 6.19.3 (`>=18.18`). La versión real del proveedor continúa
+  `PENDIENTE DE CONFIRMACIÓN PRODUCTIVA`.
+- API y Socket.IO usan la misma base devuelta por `getServerUrl()`.
+- En web local se conserva `http://localhost:3000`; en web productiva se exige
+  HTTPS explícito o same-origin. Capacitor exige una URL HTTPS runtime explícita.
+- Backend HTTP y Socket.IO usan listas de orígenes explícitas; producción no
+  añade localhost automáticamente y rechaza comodines.
+- `runtime-config.js` es público, no contiene secretos y sólo puede contener la
+  URL base del backend.
+- Las URLs reales, proveedor, proxy WebSocket y variables productivas siguen
+  pendientes del preflight autorizado; no se inventaron valores.
+
+Las variables de Mercado Pago halladas en el código son `MP_ACCESS_TOKEN`,
+`MP_SUCCESS_URL`, `MP_PENDING_URL`, `MP_FAILURE_URL`, `MP_AUTO_RETURN` y las
+variables `MP_POINT_*` documentadas en el preflight. No se encontró una variable
+o endpoint propio de webhook. Mercado Pago no fue contactado.
+
+### 25.3 Migraciones y respaldo
+
+El directorio activo conserva exactamente tres migraciones: la línea base
+`20260723135000_mysql_initial` y las candidatas aprobadas
+`20260723153500_payment_order_unique` y
+`20260827211000_expense_idempotency`. No existe una migración activa llamada
+`inventory_recipes_core` ni otra migración nueva ambigua.
+
+El plan de backup completo continúa siendo suficiente como requisito previo:
+estructura y datos, `--single-transaction`, rutinas, triggers, eventos, tamaño,
+SHA-256 y restauración en una base desechable. No se creó ni restauró un backup
+productivo en esta etapa.
+
+El SQL de preflight se amplió, pero no se ejecutó, para incluir versión/destino,
+metadatos de tablas y columnas, `SHOW CREATE TABLE`, índices críticos y
+definición/historia condicional de `_prisma_migrations`.
+
+### 25.4 Validación local posterior
+
+| Validación | Resultado 16A.1 |
+| --- | --- |
+| Versiones instaladas | Angular core 19.2.25, CLI 19.2.19, SSR 19.2.27 |
+| Frontend TypeScript | PASS |
+| Frontend lint | PASS con 97 advertencias existentes, 0 errores |
+| Frontend build productivo | PASS; advertencia existente de presupuesto SCSS de Reportes |
+| Frontend focalizadas ChromeHeadless | **NO EJECUTADO — BLOQUEO AMBIENTAL** por GPU/caché de Chrome en Windows, antes de iniciar casos |
+| Backend | Sin cambios de código/dependencias; se conserva la evidencia aprobada de 228/228 unitarias y 63/63 transaccionales |
+
+Un reintento posterior del endpoint de `npm audit` falló por conectividad local;
+los conteos documentados corresponden a la ejecución exitosa inmediatamente
+posterior a la actualización y no se sustituyeron por una inferencia.
+
+### 25.5 Decisión actualizada
+
+La vulnerabilidad crítica productiva que bloqueaba localmente fue eliminada con
+un patch compatible. Los riesgos residuales están identificados y no se ocultan.
+Quedan prohibidos producción, Render, Hostinger, DNS, Mercado Pago, Prisma
+productivo, deploy, push, merge y rebase.
+
+El único siguiente paso habilitable es solicitar autorización explícita para
+[Etapa 16A.2](./etapa-16a2-preflight-productivo-readonly.md), limitada a
+comprobaciones productivas de solo lectura. Hasta que ese preflight y los demás
+checkpoints sean aprobados, **la migración productiva sigue en NO-GO**.
+
+**ETAPA 16A.1 APROBADA — LISTO PARA PREFLIGHT PRODUCTIVO READ-ONLY**
