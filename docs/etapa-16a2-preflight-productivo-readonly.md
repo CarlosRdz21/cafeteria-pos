@@ -1,10 +1,10 @@
 # Etapa 16A.2 — Preflight productivo de solo lectura
 
-Estado del procedimiento: **ejecutado en modo read-only el 2026-09-23**. Su
+Estado del procedimiento: **reejecutado en modo read-only el 2026-09-27**. Su
 resultado sanitizado está en
 [etapa-16a2-preflight-productivo-resultado.md](./etapa-16a2-preflight-productivo-resultado.md)
-y fue NO-GO. Este procedimiento no autoriza migraciones, despliegues ni cambios
-de configuración.
+y permanece en NO-GO. Este procedimiento no autoriza migraciones, despliegues
+ni cambios de configuración.
 
 ## Alcance permitido
 

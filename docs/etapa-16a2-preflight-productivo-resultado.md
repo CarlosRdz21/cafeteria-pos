@@ -203,3 +203,136 @@ intacta, pero la discrepancia Payment 1455/Order 1540 y la infraestructura no
 confirmada impiden recomendar 16B.
 
 **ETAPA 16A.2 BLOQUEADA — NO MIGRAR PRODUCCIÓN**
+
+---
+
+## Reejecución read-only — 2026-09-27
+
+Esta sección sustituye únicamente la fotografía operativa anterior como
+resultado vigente. La evidencia previa se conserva arriba como trazabilidad.
+Snapshot según el reloj MariaDB: `2026-09-27 19:49:02.465`.
+
+Resultado: **NO-GO**. La producción se consultó exclusivamente mediante
+operaciones de lectura dentro de `START TRANSACTION READ ONLY`; todos los lotes
+terminaron con `ROLLBACK`. No se corrigió ningún dato, no se ejecutó Prisma y no
+se modificó infraestructura.
+
+### Identidad y aislamiento
+
+- Rama: `test/integridad-contable-pos`.
+- Commit candidato al iniciar: `b2cd2885c2cb5654c12bbe404b88e88e0cebdcd3`.
+- Motor remoto: MariaDB `11.8.9-MariaDB-log`.
+- Destino verificado antes de consultar: base productiva remota Hostinger en el
+  puerto 3306; no corresponde a localhost, test, clones ni `restore_verify`.
+- La credencial provino de un archivo local ignorado por Git. No se documentan
+  usuario, contraseña ni cadena de conexión.
+- La cuenta conserva `ALL PRIVILEGES` limitados a esa base. No cumple mínimo
+  privilegio y sigue siendo un bloqueo, aunque no se utilizó su capacidad de
+  escritura.
+
+El runbook auditado contiene 51 sentencias y sólo usa `SET`, `START`, `SELECT`,
+`SHOW`, `PREPARE`, `EXECUTE`, `DEALLOCATE` y `ROLLBACK`. Se detectaron cero
+sentencias prohibidas. La salida tuvo 11,674 bytes y SHA-256
+`3e82f4763bd196e30c5d3431459e10847ec010722fde423a41b1b6ef2f3d876c`; no se
+guardó una copia con datos productivos.
+
+### Snapshot actual
+
+| Entidad | Filas | Suma relevante |
+| --- | ---: | ---: |
+| Order | 1710 | $256,743.00 |
+| OrderItem | 3459 | $256,743.00 |
+| Payment | 1633 | $239,943.00 |
+| Expense | 579 | $138,266.40 |
+| CashRegister | 171 | 0 abiertas |
+| Product | 77 | — |
+| User | 2 | — |
+| Promotion | 2 | — |
+| ProductSupply | 0 | — |
+| SupplyCategory | 0 | — |
+| SupplyMovement | 0 | — |
+| PrinterSetting | 1 | — |
+
+Estados: 1631 Orders completadas, 79 canceladas y ninguna pendiente; las 171
+cajas están cerradas. Payments: 1220 en efectivo por `$173,437.00` y 413 con
+tarjeta por `$66,506.00`.
+
+Última actividad observada:
+
+- Order 1736: `2026-09-26 18:21:35.058`, completada.
+- Payment 1650 / Order 1729: `2026-09-26 18:47:39.214`, efectivo.
+- Expense 582: `2026-09-26 23:39:56.732`, categoría Nómina.
+- CashRegister 171: abierta `2026-09-26 13:52:29.607` y actualmente cerrada.
+
+### Hallazgos vigentes
+
+El único `orderId` con más de un Payment continúa siendo 1023. Sus Payments
+953, 954 y 955 son de efectivo por `$190.00` cada uno. Order 1023 sigue
+completada, con subtotal/total `$190.00`, y su único OrderItem suma y recalcula
+`$190.00`. No aparecieron duplicados adicionales y no se realizó saneamiento.
+
+CashRegister 96 permanece cerrada e intacta: `cashSales=$1,148.00`,
+`cardSales=$160.00`, gastos `$0.00`, 12 transacciones, apertura
+`2026-07-02 14:21:40.183` y cierre `2026-07-03 03:14:17.768`.
+
+Los chequeos de OrderItem sin Order, Payment sin Order, Order completada sin
+Payment, Payment para una Order no completada, Expense sin referencias válidas
+y NULL inesperado en OrderItem regresaron cero casos.
+
+Persiste el hallazgo **bloqueante** Payment 1455 / Order 1540:
+
+- Order 1540 está completada y sus tres items suman/recalculan `$378.00`;
+- la Order registra total `$378.00`, descuento `$0.00` y promociones;
+- su único Payment, 1455, registra `$115.00` en efectivo;
+- la diferencia no explicada es `$263.00`;
+- es el único Payment cuyo importe difiere del total de su Order.
+
+Este dato contradice la invariante contable del candidato, que registra
+`Payment.amount = Order.total`. Requiere una auditoría forense separada y una
+decisión explícita antes de planificar cualquier escritura productiva.
+
+También existen 11 OrderItems históricos de 11 Orders que referencian los
+`productId` 18 o 57, ya inexistentes. El candidato no define una foreign key
+`OrderItem.productId → Product.id`; se clasifican como referencias históricas
+informativas, no como incumplimiento de una FK esperada.
+
+### Esquema y migraciones
+
+- AUTO_INCREMENT críticos superiores a sus máximos: PASS.
+- `Payment.orderId` es `int(11) NOT NULL` y sólo tiene índice no único; el
+  UNIQUE pendiente fallaría por Order 1023.
+- `Expense.idempotencyKey` todavía no existe ni tiene índice.
+- Las FK críticas OrderItem→Order, Payment→Order, Expense→User y
+  Expense→CashRegister están presentes.
+- `_prisma_migrations` no existe en producción.
+- `20260723135000_mysql_initial`: esquema físicamente equivalente; futura
+  resolución como baseline, no ejecutar creación.
+- `20260723153500_payment_order_unique`: no aplicada y bloqueada por Order 1023.
+- `20260827211000_expense_idempotency`: no aplicada.
+- `20260201003637_init`: histórica SQLite; no ejecutar en MySQL.
+- `20260730190000_inventory_recipes_core`: no existe en el candidato ni en las
+  rutas Git inspeccionadas; no inventar ni ejecutar.
+
+Las tablas base de insumos existen pero están vacías. No se hallaron objetos
+adicionales de recetas o ingredientes.
+
+### Infraestructura, respaldo y control de escrituras
+
+- Las URL opcionales de frontend/backend siguen siendo placeholders; frontend
+  real, backend real, health, Node, CORS y Socket.IO continúan pendientes de
+  confirmación manual.
+- Mercado Pago no fue contactado y no se probaron cobros.
+- El plan de backup está documentado; no se creó dump productivo en esta etapa.
+- Sentencias de escritura, Prisma, saneamientos y migraciones: **0**.
+- Deploys, reinicios, cambios de variables, DNS o proveedores: **0**.
+- Producción modificada: **NO**.
+
+### Bloqueos de salida
+
+1. Auditar Payment 1455 / Order 1540 y resolver su discrepancia.
+2. Resolver controladamente los duplicados de Order 1023 antes del UNIQUE.
+3. Confirmar URL/proveedor reales, health, TLS, Node, CORS y Socket.IO.
+4. Usar una cuenta temporal realmente limitada a lectura en futuras auditorías.
+5. No iniciar 16B mientras estos bloqueos permanezcan.
+
+**ETAPA 16A.2 BLOQUEADA — NO MIGRAR PRODUCCIÓN**
