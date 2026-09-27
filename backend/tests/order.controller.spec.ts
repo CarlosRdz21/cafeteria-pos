@@ -43,6 +43,7 @@ vi.mock('../src/modules/cash/cash-registers.controller', () => ({
 }));
 
 import { OrderController } from '../src/modules/orders/order.controller';
+import { ApplicationError } from '../src/middlewares/error.middleware';
 import { SOCKET_EVENTS, SOCKET_ROOMS } from '../src/sockets/socket.constants';
 
 function crearRespuesta() {
@@ -112,6 +113,54 @@ describe('OrderController', () => {
 
     expect(respuesta.status).toHaveBeenCalledWith(400);
     expect(simulacion.registrarPago).not.toHaveBeenCalled();
+  });
+
+  it('rechaza completar una orden cancelada sin registrar efectos financieros', async () => {
+    simulacion.buscarPedido.mockResolvedValue({ id: 8, status: 'cancelled', total: 80 });
+    const respuesta = crearRespuesta();
+    const siguiente = vi.fn();
+
+    await OrderController.updateStatus(
+      {
+        params: { id: '8' },
+        body: { status: 'completed', paymentMethod: 'card' },
+      } as unknown as Request,
+      respuesta as unknown as Response,
+      siguiente,
+    );
+
+    expect(siguiente).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 409 }));
+    expect(simulacion.transaccion).not.toHaveBeenCalled();
+    expect(simulacion.registrarPago).not.toHaveBeenCalled();
+    expect(simulacion.registrarVenta).not.toHaveBeenCalled();
+    expect(simulacion.emitir).not.toHaveBeenCalled();
+  });
+
+  it('rechaza con 409 reabrir una orden completada sin escribir ni emitir eventos', async () => {
+    simulacion.buscarPedido.mockResolvedValue({ id: 1540, status: 'completed', total: 115 });
+    const respuesta = crearRespuesta();
+    const siguiente = vi.fn();
+
+    await OrderController.updateStatus(
+      {
+        params: { id: '1540' },
+        body: {
+          status: 'pending',
+          items: [{ productId: 3, name: 'Latte', price: 65, quantity: 1 }],
+        },
+      } as unknown as Request,
+      respuesta as unknown as Response,
+      siguiente,
+    );
+
+    expect(siguiente).toHaveBeenCalledWith(expect.any(ApplicationError));
+    expect(siguiente).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 409 }));
+    expect(simulacion.transaccion).not.toHaveBeenCalled();
+    expect(simulacion.actualizarPedido).not.toHaveBeenCalled();
+    expect(simulacion.registrarPago).not.toHaveBeenCalled();
+    expect(simulacion.registrarVenta).not.toHaveBeenCalled();
+    expect(simulacion.emitir).not.toHaveBeenCalled();
+    expect(respuesta.json).not.toHaveBeenCalled();
   });
 
   it('no repite pago, caja ni eventos cuando otro intento ya completo el pedido', async () => {
@@ -232,7 +281,17 @@ describe('OrderController', () => {
 
   it('cancela y notifica exactamente los tres destinos actuales', async () => {
     const pedido = { id: 8, status: 'cancelled' };
-    simulacion.actualizarPedido.mockResolvedValue(pedido);
+    simulacion.actualizarPedidosCondicional.mockResolvedValue({ count: 1 });
+    simulacion.buscarPedido.mockResolvedValue(pedido);
+    simulacion.transaccion.mockImplementation(
+      async (operacion: (tx: unknown) => unknown) =>
+        operacion({
+          order: {
+            updateMany: simulacion.actualizarPedidosCondicional,
+            findUniqueOrThrow: simulacion.buscarPedido,
+          },
+        }),
+    );
     const respuesta = crearRespuesta();
 
     await OrderController.cancel({ params: { id: '8' } } as unknown as Request, respuesta as unknown as Response);
@@ -241,6 +300,32 @@ describe('OrderController', () => {
     expect(simulacion.emitir).toHaveBeenCalledWith(SOCKET_EVENTS.orderCancelled, 8);
     expect(simulacion.emitir).toHaveBeenCalledWith(SOCKET_EVENTS.orderUpdated, pedido);
     expect(respuesta.json).toHaveBeenCalledWith(pedido);
+  });
+
+  it('rechaza cancelar una orden que ya no esta pendiente sin emitir eventos', async () => {
+    simulacion.actualizarPedidosCondicional.mockResolvedValue({ count: 0 });
+    simulacion.transaccion.mockImplementation(
+      async (operacion: (tx: unknown) => unknown) =>
+        operacion({
+          order: {
+            updateMany: simulacion.actualizarPedidosCondicional,
+            findUniqueOrThrow: simulacion.buscarPedido,
+          },
+        }),
+    );
+    const respuesta = crearRespuesta();
+    const siguiente = vi.fn();
+
+    await OrderController.cancel(
+      { params: { id: '1540' } } as unknown as Request,
+      respuesta as unknown as Response,
+      siguiente,
+    );
+
+    expect(siguiente).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 409 }));
+    expect(simulacion.buscarPedido).not.toHaveBeenCalled();
+    expect(simulacion.emitir).not.toHaveBeenCalled();
+    expect(respuesta.json).not.toHaveBeenCalled();
   });
 
   it('responde 404 al eliminar un pedido inexistente sin emitir eventos', async () => {
