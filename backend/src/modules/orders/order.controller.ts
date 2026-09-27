@@ -140,6 +140,14 @@ export class OrderController {
         return res.status(404).json({ error: 'Orden no encontrada' });
       }
 
+      if (existingOrder.status === 'completed' && status !== 'completed') {
+        throw new ApplicationError(
+          409,
+          'Completed orders cannot transition to another status',
+          'Una orden completada y pagada no puede volver a pendiente ni cambiar de estado',
+        );
+      }
+
       let emitirActualizacion = true;
       if (status === 'completed') {
         if (existingOrder.status === 'completed') {
@@ -148,6 +156,14 @@ export class OrderController {
             include: { items: true }
           });
           return res.json(completedOrder);
+        }
+
+        if (existingOrder.status !== 'pending') {
+          throw new ApplicationError(
+            409,
+            'Only pending orders can be completed',
+            'Sólo una orden pendiente puede completarse',
+          );
         }
 
         if (!paymentMethod) {
@@ -163,7 +179,7 @@ export class OrderController {
           const reclamo = await tx.order.updateMany({
             where: {
               id: orderId,
-              status: { not: 'completed' }
+              status: 'pending'
             },
             data: { status: 'completed' }
           });
@@ -219,71 +235,83 @@ export class OrderController {
         });
       } else {
         if (status === 'pending' && Array.isArray(items) && items.length > 0) {
-          const pendingOrder = await prisma.order.findUnique({
-            where: { id: orderId },
-            include: { items: true }
-          });
-
-          if (!pendingOrder) {
-            return res.status(404).json({ error: 'Orden no encontrada' });
-          }
-
-          const mergedItemsMap = new Map<string, any>();
-
-          for (const item of pendingOrder.items) {
-            mergedItemsMap.set(generarClaveFusionProductoPendiente(item), {
-              productId: item.productId,
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price,
-              subtotal: item.subtotal
+          await prisma.$transaction(async tx => {
+            const pendingOrder = await tx.order.findUnique({
+              where: { id: orderId },
+              include: { items: true }
             });
-          }
 
-          for (const item of items) {
-            const mergeKey = generarClaveFusionProductoPendiente(item);
-            const existing = mergedItemsMap.get(mergeKey);
-            if (existing) {
-              existing.quantity += item.quantity;
-              existing.subtotal = existing.price * existing.quantity;
-            } else {
-              mergedItemsMap.set(mergeKey, {
+            if (!pendingOrder) {
+              throw new ApplicationError(404, 'Order not found', 'Orden no encontrada');
+            }
+
+            const claim = await tx.order.updateMany({
+              where: { id: orderId, status: 'pending' },
+              data: { status: 'pending' }
+            });
+            if (claim.count !== 1) {
+              throw new ApplicationError(
+                409,
+                'Only pending orders can be edited',
+                'La orden ya no está pendiente y no puede modificarse',
+              );
+            }
+
+            const mergedItemsMap = new Map<string, any>();
+
+            for (const item of pendingOrder.items) {
+              mergedItemsMap.set(generarClaveFusionProductoPendiente(item), {
                 productId: item.productId,
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,
-                subtotal: item.price * item.quantity
+                subtotal: item.subtotal
               });
             }
-          }
 
-          const mergedItems = Array.from(mergedItemsMap.values());
-
-          const subtotal = mergedItems.reduce(
-            (sum: number, item: any) => sum + item.price * item.quantity,
-            0
-          );
-          const tax = 0;
-          const total = subtotal + tax;
-
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              status,
-              subtotal,
-              tax,
-              total,
-              items: {
-                deleteMany: {},
-                create: mergedItems.map((item: any) => ({
+            for (const item of items) {
+              const mergeKey = generarClaveFusionProductoPendiente(item);
+              const existing = mergedItemsMap.get(mergeKey);
+              if (existing) {
+                existing.quantity += item.quantity;
+                existing.subtotal = existing.price * existing.quantity;
+              } else {
+                mergedItemsMap.set(mergeKey, {
                   productId: item.productId,
                   name: item.name,
                   quantity: item.quantity,
                   price: item.price,
                   subtotal: item.price * item.quantity
-                }))
+                });
               }
             }
+
+            const mergedItems = Array.from(mergedItemsMap.values());
+            const subtotal = mergedItems.reduce(
+              (sum: number, item: any) => sum + item.price * item.quantity,
+              0
+            );
+            const tax = 0;
+            const total = subtotal + tax;
+
+            await tx.order.update({
+              where: { id: orderId },
+              data: {
+                subtotal,
+                tax,
+                total,
+                items: {
+                  deleteMany: {},
+                  create: mergedItems.map((item: any) => ({
+                    productId: item.productId,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    subtotal: item.price * item.quantity
+                  }))
+                }
+              }
+            });
           });
         } else {
           await prisma.order.update({
@@ -350,26 +378,40 @@ export class OrderController {
       const tax = 0;
       const total = subtotal + tax;
 
-      const updatedOrder = await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          subtotal,
-          tax,
-          total,
-          items: {
-            deleteMany: {},
-            create: items.map((item: any) => ({
-              productId: item.productId,
-              name: item.name,
-              quantity: Number(item.quantity || 0),
-              price: Number(item.price || 0),
-              subtotal: Number(item.price || 0) * Number(item.quantity || 0)
-            }))
-          }
-        },
-        include: {
-          items: true
+      const updatedOrder = await prisma.$transaction(async tx => {
+        const claim = await tx.order.updateMany({
+          where: { id: orderId, status: 'pending' },
+          data: { status: 'pending' }
+        });
+        if (claim.count !== 1) {
+          throw new ApplicationError(
+            409,
+            'Only pending orders can be edited',
+            'La orden ya no está pendiente y no puede modificarse',
+          );
         }
+
+        return tx.order.update({
+          where: { id: orderId },
+          data: {
+            subtotal,
+            tax,
+            total,
+            items: {
+              deleteMany: {},
+              create: items.map((item: any) => ({
+                productId: item.productId,
+                name: item.name,
+                quantity: Number(item.quantity || 0),
+                price: Number(item.price || 0),
+                subtotal: Number(item.price || 0) * Number(item.quantity || 0)
+              }))
+            }
+          },
+          include: {
+            items: true
+          }
+        });
       });
 
       const io = getIO();
@@ -394,9 +436,20 @@ export class OrderController {
         return res.status(400).json({ error: 'Invalid order id' });
       }
 
-      const order = await prisma.order.update({
-        where: { id: orderId },
-        data: { status: 'cancelled' }
+      const order = await prisma.$transaction(async tx => {
+        const claim = await tx.order.updateMany({
+          where: { id: orderId, status: 'pending' },
+          data: { status: 'cancelled' }
+        });
+        if (claim.count !== 1) {
+          throw new ApplicationError(
+            409,
+            'Only pending orders can be cancelled',
+            'Sólo una orden pendiente puede cancelarse',
+          );
+        }
+
+        return tx.order.findUniqueOrThrow({ where: { id: orderId } });
       });
 
       // 🔔 Notificar por socket
