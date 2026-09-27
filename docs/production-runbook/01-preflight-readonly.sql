@@ -151,11 +151,32 @@ SELECT 'Expense_without_CashRegister', COUNT(*)
 FROM Expense e LEFT JOIN CashRegister c ON c.id = e.cashRegisterId
 WHERE e.cashRegisterId IS NOT NULL AND c.id IS NULL;
 
+-- Order 1540 es una excepción histórica exacta: dos cobros reales, pero sólo
+-- el primer Payment quedó persistido. Cualquier cambio en esta huella es NO-GO.
+SELECT CASE
+         WHEN (SELECT COUNT(*) FROM `Order`
+               WHERE id = 1540 AND total = 378.00 AND status = 'completed') = 1
+          AND (SELECT COUNT(*) FROM Payment
+               WHERE id = 1455 AND orderId = 1540 AND amount = 115.00
+                 AND method = 'cash') = 1
+          AND (SELECT COUNT(*) FROM Payment WHERE orderId = 1540) = 1
+          AND (SELECT COUNT(*) FROM CashRegister
+               WHERE id = 150 AND cashSales = 716.00 AND cardSales = 638.00
+                 AND totalTransactions = 8 AND status = 'closed') = 1
+         THEN 'PASS_KNOWN_EXCEPTION'
+         ELSE 'NO_GO_EXCEPTION_CHANGED'
+       END AS order_1540_exception_status;
+
+-- Debe devolver cero filas. La exclusión es exacta y sólo aplica a 1540/1455.
 SELECT p.id AS payment_id, p.orderId, p.amount AS payment_amount,
        o.total AS order_total, o.status AS order_status
 FROM Payment p
 JOIN `Order` o ON o.id = p.orderId
 WHERE ABS(p.amount - o.total) > 0.005
+  AND NOT (
+    o.id = 1540 AND o.total = 378.00 AND o.status = 'completed'
+    AND p.id = 1455 AND p.amount = 115.00 AND p.method = 'cash'
+  )
 ORDER BY p.orderId, p.id;
 
 SELECT 'OrderItem_without_Product' AS anomaly, COUNT(*) AS anomaly_count
